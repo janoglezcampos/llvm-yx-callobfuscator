@@ -94,7 +94,7 @@ __callobf_doCall:
 ; Set rbx to point to the reference to restore
     lea rbx, [pp_restore]
 
-; Take aby variable we need from the stack before changing rsp
+; Take any variable we need from the stack before changing rsp
     mov r11, [pp_function]
 
     mov rsp, [pp_newRsp]
