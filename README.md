@@ -21,9 +21,8 @@ This project is a plugin meant to be used with [opt](https://llvm.org/docs/Comma
 >   * [File distribution](#file-distribution)
 >   * [How the pass works](#how-the-pass-works)
 >   *  [How the dispatching system works](#how-the-dispatching-system-works)
->
+> * [Thanks](#thanks)
 > * [TODO](#todo)
-
 
 ## Setup
 This setup is written for Windows, but it should be possible to setup this environment in Linux easily. This was tested with LLVM 16.x and 17.x.
@@ -50,11 +49,9 @@ This setup is written for Windows, but it should be possible to setup this envir
         git clone https://github.com/janoglezcampos/llvm-yx-callobfuscator
 
 
-    To build this project, we will be using CMAKE. Because I found it convenient, I use VScode with the cmake extension. You will find my CMAKE config at ```.vscode_conf/setting.json```
-
+    To build this project, we will be using CMAKE. Because I find it convenient, I use VScode with the CMake extension. You will find my CMAKE config at ```.vscode_conf/setting.json```
 
     In any other case, launch an MSYS2 Mingw64 terminal and do exactly what I say (without checking what any of the commands Im giving you will do to your beloved machine):
-
 
     Go to the root directory of this repo:
 
@@ -64,7 +61,7 @@ This setup is written for Windows, but it should be possible to setup this envir
 
         mkdir build; cd build
 
-    Choose an installation location. I recommend doing this so it will be easier to either get the files in the right place or just be able to pick them up easily. Also, the [usage](#usage-and-example) section later will use this folder as the relative folder for accessing these files, so if you add it to the path, the commands will work right away. I use  ```C:/Users/<my-user>/llvm-plugins```, but creating a folder in the project directory called ```install```, side by side with ```build``` will do. This folder will not be edited if you don't run the install command, but you will have to go get the files in the build folder.
+    Choose an install location. I recommend doing this so it will be easier to either get the files in the right place or just be able to pick them up easily. Also, the [usage](#usage-and-example) section will use this folder as the relative folder for accessing these files, so if you add it to the PATH, the commands will work right away. I use  ```C:/Users/<my-user>/llvm-plugins```, but creating a folder in the project directory called ```install```, side by side with ```build``` will do. This folder will not be edited if you don't run the install command, but you will have to go get the files in the build folder.
 
 
     Configure the project; here you specify the installation folder. ```DCMAKE_BUILD_TYPE``` will set the default mode: Debug, Release or MinSizeRel. Depending on which generator you are using, you are going to be able to change this later or not. I use Nija as the generator, but you can use any other.
@@ -144,36 +141,30 @@ Now you should have ```./build/example.exe```, the final executable.
 
 
 * ### How the pass works
+    Knoledge about indirect syscalling, dynamic stack spoofing and common terms like hooks, register, stack... is assumed.
+    This is not an in-depth guide, just enough to get you throw the execution flow.
 
-    First, we go through every defined function in the module; if any of them is found in the config file, we store it. Once we find all the functions that will be obfuscated, we create two tables:
+    First, we go through every defined function in the code; if any of them is found in the config file, we store it. Once we find all the functions that will be obfuscated, we create two tables:
     * ```__callobf_dllTable```: This contains all required dlls for obfuscated functions; each dll has an ID, which is its index in the table.
     * ```__callobf_functionTable```: This contains all obfuscated functions and information about which dll contains them, the number of arguments of the function, if it is a syscall, etc.
 
-
-    At compile time, these tables will be partially initialized, but the only value we need at this moment is the function ID (its index in the function table).
-
+    At compile time, this tables will be partially initialized, but the only value we need at this moment is the function ID (its index in the function table).
 
     After building the tables, we find every call to the obfuscated functions; for each of them, replace the call by a call to ```__callobf_callDispatcher```, and pass the id as the first argument, then pass all the function arguments.
 
-
     ```__callobf_callDispatcher``` has is defined as ```PVOID __callobf_callDispatcher(DWORD32 index, ...)```. It will get all the info it needs from the function table by using the ID (index) in the first argument.
-
 
     A function has its entry partially initialized until it is called; at that moment, ```__callobf_callDispatcher``` will store all the required information to call and obfuscate the function and pass the other arguments to the function being called.
 
-
 * ### How the dispatching system works
 
-
-    The dispatching system starts by initializing the frame table (```__callobf_globalFrameTable```), used to cache posible frames and gadgets that will be used to build the obfuscated stack. The method is the same as explained [here](https://klezvirus.github.io/RedTeaming/AV_Evasion/StackSpoofing/), still an outstanding job.
-
+    The dispatching system starts by initializing the frame table (```__callobf_globalFrameTable```), used to cache posible frames and gadgets that will be used to build the obfuscated stack. The obfuscation method is the same as explained [here](https://klezvirus.github.io/RedTeaming/AV_Evasion/StackSpoofing/), still an outstanding job.
 
     When __callobf_callDispatcher gets invoked, the following happens:
   * Loads the function if needed:
     * Gets the dll from the dll table and loads it if needed.
     * Find the function in the IAT and store the address in the function table.
     * Find if the call is a syscall; if it is, get the ssn and store it in the function table.
-
 
   * Build a fake stack using the values stored in the frame table     and store it over the current stack pointer.
   * Update the ciclic value used to pick which values are used for    building the stack.
@@ -183,11 +174,13 @@ Now you should have ```./build/example.exe```, the final executable.
   * If syscall, set r10 to hold the first argument.
   * Jump to the function or syscall instruction.
 
+## Thanks
+To Arash Parsa, aka [waldoirc](https://twitter.com/waldoirc), Athanasios Tserpelis, aka [trickster0](https://twitter.com/trickster012) and Alessandro Magnosi, aka [klezVirus](https://twitter.com/klezVirus) because of [SilentMoonwalk](https://klezvirus.github.io/RedTeaming/AV_Evasion/StackSpoofing/)
+
 ---
 > ## TODO:
 >### Docs/formatting:
 >* Document functions
->* Add thanks
 >* Mby rename from FRAME_TABLE_ENTRY to something like FRAME_INFO
 >* Rename everything realted to pushRbp to saveRbp
 >* Somehow improve stackSpoofHelper.x64.asm readability
