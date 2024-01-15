@@ -1,0 +1,37 @@
+{
+    "cmake.configureOnOpen": false,
+    "cmake.buildDirectory": "${workspaceFolder}/build",
+    "cmake.installPrefix": "${userHome}/llvm-plugins",
+    "cmake.configureArgs": [
+        "-DCMAKE_VERBOSE_MAKEFILE=ON"
+    ],
+    "files.associations": {
+        "typeinfo": "cpp",
+        "*.hpp": "cpp",
+        "*.h": "c",
+        "*.hasm": "asm-intel-x86-generic",
+        "*.cpp": "cpp",
+        "*.c": "c",
+        "*.asm": "asm-intel-x86-generic",
+        "*.in": "cpp",
+        "cstdlib": "c",
+        "random": "c",
+        "chrono": "c",
+        "variant": "c",
+        "format": "c"
+    },
+    "VSCodeCounter.exclude": [
+        "**/.gitignore",
+        "**/.vscode/**",
+        "**/node_modules/**",
+        "**/build/**",
+        "**/*.json",
+        "**/*.cmake",
+        "**/.txt",
+        "**/*.md"
+    ],
+    "VSCodeCounter.include": [
+        "CallDispatcher/**",
+        "CallObfuscatorPlugin/**"
+    ]
+}
