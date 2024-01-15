@@ -20,12 +20,12 @@
 %endmacro
 
 ; Defined strucs
-struc FRAME_TABLE_ENTRY
+struc FRAME_INFO
     .frameSize              resq 1
     .p_entryAddr            resq 1
 endstruc
 
-struc PUSH_RBP_FRAME_TABLE_ENTRY
+struc SAVE_RBP_FRAME_INFO
     .frameSize              resq 1
     .p_entryAddr            resq 1
     .rbpOffset              resq 1
@@ -41,16 +41,16 @@ struc STACK_SPOOF_INFO
     .p_entryRetAddr         resq 1 ; 0x18
 
     .addRspCount            resq 1 ; 0x20
-    .addRspList             resb sizeoflist(FRAME_TABLE_ENTRY, MAX_ENTRIES_PER_LIST)
+    .addRspList             resb sizeoflist(FRAME_INFO, MAX_ENTRIES_PER_LIST)
 
     .jmpRbxCount            resq 1
-    .jmpRbxList             resb sizeoflist(FRAME_TABLE_ENTRY, MAX_ENTRIES_PER_LIST)
+    .jmpRbxList             resb sizeoflist(FRAME_INFO, MAX_ENTRIES_PER_LIST)
 
     .setFpRegCount          resq 1
-    .setFpRegList           resb sizeoflist(FRAME_TABLE_ENTRY, MAX_ENTRIES_PER_LIST)
+    .setFpRegList           resb sizeoflist(FRAME_INFO, MAX_ENTRIES_PER_LIST)
 
-    .pushRbpCount           resq 1
-    .pushRbpList            resb sizeoflist(PUSH_RBP_FRAME_TABLE_ENTRY, MAX_ENTRIES_PER_LIST)
+    .saveRbpCount           resq 1
+    .saveRbpList            resb sizeoflist(SAVE_RBP_FRAME_INFO, MAX_ENTRIES_PER_LIST)
 endstruc
 
 %endif

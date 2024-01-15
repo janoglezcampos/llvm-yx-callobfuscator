@@ -34,10 +34,34 @@ unsigned long __callobf_getLastError()
     return __callobf_lastError;
 }
 
+HMODULE __callobf_loadLibrary(PCHAR p_dllName)
+{
+    /*
+    PVOID p_kernel32 = __callobf_getModuleAddrA("kernelbase.dll");
+    PLOADLIBRARYAp_LoadLibraryA = __callobf_getFunctionAddrA(p_kernel32, "LoadLibraryA");
+    if (!p_LoadLibraryA)
+    {
+        DEBUG_PRINT("Error, couldnt get ptr to LoadLibraryA");
+        return NULL;
+    }
+    */
+    DWORD loadLibraryIndex = -1;
+    for (DWORD i = 0; __callobf_functionTable.count; i++)
+        if (__callobf_functionTable.entries[i].hash == __callobf_hashA("LoadLibraryA"))
+            loadLibraryIndex = i;
+
+    if (loadLibraryIndex == -1)
+        return NULL;
+
+    return __callobf_callDispatcher(loadLibraryIndex, p_dllName);
+}
+
 void *__callobf_loadFunction(PFUNCTION_TABLE_ENTRY p_fEntry)
 {
     PDLL_TABLE_ENTRY p_dllEntry = NULL;
     DWORD32 moduleHash = 0;
+    USHORT ssn = 0;
+    PVOID p_function = NULL;
 
     p_dllEntry = &__callobf_dllTable.entries[p_fEntry->moduleIndex];
     moduleHash = __callobf_hashA(p_dllEntry->name);
@@ -49,24 +73,7 @@ void *__callobf_loadFunction(PFUNCTION_TABLE_ENTRY p_fEntry)
         DEBUG_PRINT("Loading module: %s", p_dllEntry->name);
         p_dllEntry->handle = __callobf_getModuleAddrH(moduleHash);
         if (!p_dllEntry->handle)
-        {
-            // TODO: Opsec this
-            // Import everything by hash
-            // Add eaf bypass
-            // Make a placeholder for LoadLibraryA
-            // Make a load error field for both dlls and functions
-            // Encript dll names at compile time
-            PVOID p_kernel32 = NULL;
-            PLOADLIBRARYA p_LoadLibraryA = NULL;
-            p_kernel32 = __callobf_getModuleAddrA("kernelbase.dll");
-            p_LoadLibraryA = __callobf_getFunctionAddrA(p_kernel32, "LoadLibraryA");
-            if (!p_LoadLibraryA)
-            {
-                DEBUG_PRINT("Error, couldnt get ptr to LoadLibraryA");
-                return NULL;
-            }
-            p_dllEntry->handle = p_LoadLibraryA(p_dllEntry->name);
-        }
+            p_dllEntry->handle = __callobf_loadLibrary(p_dllEntry->name);
     }
 
     if (!p_dllEntry->handle)
@@ -74,9 +81,6 @@ void *__callobf_loadFunction(PFUNCTION_TABLE_ENTRY p_fEntry)
         DEBUG_PRINT("Error, couldnt load dll");
         return NULL;
     }
-
-    USHORT ssn = 0;
-    PVOID p_function = NULL;
 
     if (moduleHash == __callobf_hashA("ntdll.dll"))
     {

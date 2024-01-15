@@ -27,20 +27,18 @@
 // ==========================================================
 // ================= STRUCT DEFINITIONS =====================
 
-// TODO: Mby rename from FRAME_TABLE_ENTRY to something like FRAME_INFO
-typedef struct _FRAME_TABLE_ENTRY
+typedef struct _FRAME_INFO
 {
     SIZE_T frameSize;
     PVOID p_entryAddr;
-} FRAME_TABLE_ENTRY, *PFRAME_TABLE_ENTRY;
+} FRAME_INFO, *PFRAME_INFO;
 
-// TODO: Rename everything realted to pushRbp to saveRbp
-typedef struct _PUSH_RBP_FRAME_TABLE_ENTRY
+typedef struct _SAVE_RBP_FRAME_INFO
 {
     SIZE_T frameSize;
     PVOID p_entryAddr;
     DWORD64 rbpOffset;
-} PUSH_RBP_FRAME_TABLE_ENTRY, *PPUSH_RBP_FRAME_TABLE_ENTRY;
+} SAVE_RBP_FRAME_INFO, *PSAVE_RBP_FRAME_INFO;
 
 #pragma pack(push, 1)
 typedef struct _FRAME_TABLE
@@ -54,16 +52,16 @@ typedef struct _FRAME_TABLE
     PVOID *p_entryRetAddr;
 
     DWORD64 addRspCount;
-    FRAME_TABLE_ENTRY addRspList[MAX_ENTRIES_PER_LIST];
+    FRAME_INFO addRspList[MAX_ENTRIES_PER_LIST];
 
     DWORD64 jmpRbxCount;
-    FRAME_TABLE_ENTRY jmpRbxList[MAX_ENTRIES_PER_LIST];
+    FRAME_INFO jmpRbxList[MAX_ENTRIES_PER_LIST];
 
     DWORD64 setFpRegCount;
-    FRAME_TABLE_ENTRY setFpRegList[MAX_ENTRIES_PER_LIST];
+    FRAME_INFO setFpRegList[MAX_ENTRIES_PER_LIST];
 
-    DWORD64 pushRbpCount;
-    PUSH_RBP_FRAME_TABLE_ENTRY pushRbpList[MAX_ENTRIES_PER_LIST];
+    DWORD64 saveRbpCount;
+    SAVE_RBP_FRAME_INFO saveRbpList[MAX_ENTRIES_PER_LIST];
 } STACK_SPOOF_INFO, *PSTACK_SPOOF_INFO;
 
 #pragma pack(pop)
@@ -79,7 +77,7 @@ extern PVOID __callobf_buildSpoofedCallStack(PSTACK_SPOOF_INFO);
 
 DWORD64 __callobf_fillGadgetTable(
     PVOID p_module,
-    PFRAME_TABLE_ENTRY p_entry,
+    PFRAME_INFO p_entry,
     DWORD64 maxEntries,
     PBYTE gadgetBytes,
     PBYTE mask,
@@ -87,12 +85,12 @@ DWORD64 __callobf_fillGadgetTable(
 
 DWORD64 __callobf_fillFpRegFrameTable(
     PVOID p_module,
-    PFRAME_TABLE_ENTRY p_entry,
+    PFRAME_INFO p_entry,
     DWORD64 maxEntries);
 
-DWORD64 __callobf_fillPushRbpFrameTable(
+DWORD64 __callobf_fillSaveRbpFrameTable(
     PVOID p_module,
-    PPUSH_RBP_FRAME_TABLE_ENTRY p_entry,
+    PSAVE_RBP_FRAME_INFO p_entry,
     DWORD64 maxEntries);
 
 BOOL __callobf_fillStackSpoofTables(

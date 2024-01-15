@@ -43,11 +43,11 @@ STACK_SPOOF_INFO __callobf_globalFrameTable = {
     .jmpRbxList = {0},
 
     .setFpRegList = {0},
-    .pushRbpList = {0}};
+    .saveRbpList = {0}};
 
 DWORD64 __callobf_fillGadgetTable(
     PVOID p_module,
-    PFRAME_TABLE_ENTRY p_entry,
+    PFRAME_INFO p_entry,
     DWORD64 maxEntries,
     PBYTE gadgetBytes,
     PBYTE mask,
@@ -122,7 +122,7 @@ DWORD64 __callobf_fillGadgetTable(
 
 DWORD64 __callobf_fillFpRegFrameTable(
     PVOID p_module,
-    PFRAME_TABLE_ENTRY p_entry,
+    PFRAME_INFO p_entry,
     DWORD64 maxEntries)
 {
     UWOP_ITERATOR_CONTEXT uwopCtx = {0};
@@ -195,9 +195,9 @@ DWORD64 __callobf_fillFpRegFrameTable(
     return entryCount;
 }
 
-DWORD64 __callobf_fillPushRbpFrameTable(
+DWORD64 __callobf_fillSaveRbpFrameTable(
     PVOID p_module,
-    PPUSH_RBP_FRAME_TABLE_ENTRY p_entry,
+    PSAVE_RBP_FRAME_INFO p_entry,
     DWORD64 maxEntries)
 {
     UWOP_ITERATOR_CONTEXT uwopCtx = {0};
@@ -210,7 +210,7 @@ DWORD64 __callobf_fillPushRbpFrameTable(
 
     DWORD64 entryCount = 0;
     BOOL valid = TRUE;
-    BOOL foundPushRbpOp = FALSE;
+    BOOL foundSaveRbpOp = FALSE;
 
     if (!p_module)
         return entryCount;
@@ -228,7 +228,7 @@ DWORD64 __callobf_fillPushRbpFrameTable(
 
         frameSize = 0;
         valid = TRUE;
-        foundPushRbpOp = FALSE;
+        foundSaveRbpOp = FALSE;
         while ((p_uwop = __callobf_getNextUwop(&uwopCtx)))
         {
             switch (p_uwop->UnwindOp)
@@ -242,12 +242,12 @@ DWORD64 __callobf_fillPushRbpFrameTable(
 
                 if (p_uwop->OpInfo == RBP)
                 {
-                    if (foundPushRbpOp)
+                    if (foundSaveRbpOp)
                     {
                         valid = FALSE;
                         break;
                     }
-                    foundPushRbpOp = TRUE;
+                    foundSaveRbpOp = TRUE;
                 }
                 break;
             case UWOP_SET_FPREG:
@@ -260,7 +260,7 @@ DWORD64 __callobf_fillPushRbpFrameTable(
                 break;
             frameSize += __callobf_getFrameSizeModification(p_unwindInfo, p_uwop);
         }
-        if (valid && foundPushRbpOp)
+        if (valid && foundSaveRbpOp)
         {
             PVOID p_begin = NULL;
             PVOID p_end = NULL;
@@ -315,9 +315,9 @@ BOOL __callobf_fillStackSpoofTables(PSTACK_SPOOF_INFO p_frameTable, PVOID p_modu
               p_frameTable->entryCountPerList)))
         return FALSE;
 
-    if (!(p_frameTable->pushRbpCount = __callobf_fillPushRbpFrameTable(
+    if (!(p_frameTable->saveRbpCount = __callobf_fillSaveRbpFrameTable(
               p_module,
-              p_frameTable->pushRbpList,
+              p_frameTable->saveRbpList,
               p_frameTable->entryCountPerList)))
         return FALSE;
     return TRUE;
