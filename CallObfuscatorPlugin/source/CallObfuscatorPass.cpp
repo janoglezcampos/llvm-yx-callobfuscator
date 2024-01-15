@@ -163,6 +163,19 @@ namespace callobfuscatorpass
         outs() << "[INFO] : Analyzing module: " << M.getName() << "\n";
 
         callobfuscator::CallObfuscator obf = callobfuscator::CallObfuscator(M);
+
+        if (!M.getFunction("LoadLibraryA"))
+        {
+            LLVMContext &ctx = M.getContext();
+            FunctionType *p_loadLibraryType = FunctionType::get(
+                PointerType::get(ctx, 0),
+                {PointerType::get(ctx, 0)},
+                false);
+
+            M.getOrInsertFunction("__callobf_callDispatcher", p_loadLibraryType);
+            outs() << "[INFO] : Inserted LoadLibraryA definition" << M.getName() << "\n";
+        }
+
         for (Function &F : M)
         {
             StringRef dllName;
