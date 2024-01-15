@@ -1,7 +1,7 @@
 /**
  * @file commonUtils.c
  * @author Alejandro González (@httpyxel)
- * @brief Common functionality that are used across the project.
+ * @brief Common functionality is are used across the project.
  * @version 0.1
  * @date 2024-01-14
  *

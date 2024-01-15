@@ -1,7 +1,7 @@
 /**
  * @file CallObfuscator.cpp
  * @author Alejandro González (@httpyxel)
- * @brief Includes de logic to transparently apply call obfucation at compile time.
+ * @brief Includes the logic to transparently apply call obfucation at compile time.
  * @version 0.1
  * @date 2024-01-14
  *
