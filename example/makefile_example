@@ -1,0 +1,89 @@
+
+
+VPATH=source
+
+PROJECT_NAME = example
+
+OUTPUT_DIR = "./build"
+C_OBJS_DIR = "./build/objs"
+C_IRS_DIR = "./build/irs"
+
+OUT_NAME = 		./build/$(PROJECT_NAME).exe
+OBJ_OUT_NAME = 	./build/objs/$(PROJECT_NAME).obj
+IR_OUT_NAME = 	./build/irs/$(PROJECT_NAME).ll
+
+CCX64 = clang 
+CCX86 = clang
+
+CFLAGS = -O0 -Xclang -disable-O0-optnone -S -emit-llvm 
+#CFLAGS = -fsanitize=address
+
+LDX64 = clang 
+LFLAGS = 
+
+AR = ar
+
+LLVM_LINK = llvm-link
+LLVM_LINK_FLAGS = -S
+
+OBF_PLUGIN_PATH =
+OBF_PASS_NAME =
+
+LLVM_OBF_HELPERS =
+export LLVM_OBF_FUNCTIONS="callobfuscator.conf"
+
+OPT = opt
+OPT_FLAGS = -load-pass-plugin=$(OBF_PLUGIN_PATH) -passes=$(OBF_PASS_NAME) -S
+
+ARFLAGS = rcs
+
+C_SOURCES := $(shell find . -name '*.c')
+C_IRS	  := $(patsubst %.c, ./build/irs/%.ll, $(notdir $(C_SOURCES)))
+
+ifeq ($(ARCH),x86)
+CC = $(CCX86)
+AS = $(ASX86)
+NASM_SOURCE = $(NASM_SOURCE_X86)
+else
+CC = $(CCX64)
+AS = $(ASX64)
+NASM_SOURCE = $(NASM_SOURCE_X64)
+endif
+
+all: create_directories $(OUT_NAME)
+
+.FORCE:
+link:  $(OBJ_OUT_NAME) .FORCE
+	$(LDX64) $(OBJ_OUT_NAME)  -o $(OUT_NAME) $(LFLAGS) -L$(LLVM_OBF_HELPERS) -lcallobfuscatorhelpers
+
+.FORCE:
+run_opt: $(IR_OUT_NAME) .FORCE
+	$(OPT) $(OPT_FLAGS) $(IR_OUT_NAME) -o opt_check.ll
+
+$(OUT_NAME): $(OBJ_OUT_NAME)
+	$(LDX64) $^  -o $@ $(LFLAGS) -L$(LLVM_OBF_HELPERS) -lcallobfuscatorhelpers
+
+$(OBJ_OUT_NAME): $(IR_OUT_NAME)
+	llc -filetype=obj --mtriple=x86_64-pc-windows-msvc $(IR_OUT_NAME) -o $(OBJ_OUT_NAME)
+
+$(IR_OUT_NAME): $(C_IRS)
+	$(LLVM_LINK) $(LLVM_LINK_FLAGS) $^ -o $@
+	$(OPT) $(OPT_FLAGS) $@ -o $@ 
+
+./build/irs/%.ll:%.c
+	$(CC) $< $(CFLAGS) -o $@ -Iheaders
+
+
+create_directories:
+	@if [ ! -d $(OUTPUT_DIR) ]; then \
+        mkdir $(OUTPUT_DIR); \
+    fi
+	@if [ ! -d $(C_OBJS_DIR) ]; then \
+        mkdir $(C_OBJS_DIR); \
+    fi
+	@if [ ! -d $(C_IRS_DIR) ]; then \
+        mkdir $(C_IRS_DIR); \
+    fi
+
+clean:
+	-rm $(C_OBJS) $(OUT_NAME) $(IR_OUT_NAME) $(OBJ_OUT_NAME) $(C_IRS)
