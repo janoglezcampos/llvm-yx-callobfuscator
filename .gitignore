@@ -1,8 +1,8 @@
 #Folders:
-*/internal-tests
-*/build
-*/.vscode
-*/.VSCodeCounter
+**/internal-tests
+**/build/**
+**/.vscode
+**/.VSCodeCounter
 
 
 #C/C++
