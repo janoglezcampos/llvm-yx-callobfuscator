@@ -334,9 +334,9 @@ namespace callobfuscator
     bool CallObfuscator::replaceUse(Use &use, int functionTableIndex)
     {
         outs() << "[INFO] Replacing use\n";
-        // TODO: Handle invoke instructions and exception stuff
+        // TODO: Handle invoke instructions and exception stuff (should not happen in C but...)
         // TODO: Handle indirect calls
-        // TODO: Handle value reads
+        // TODO: Handle address reads
         if (Instruction *p_callInstruction = dyn_cast<Instruction>(use.getUser()))
         {
             if (p_callInstruction->getOpcode() == Instruction::OtherOps::Call)
