@@ -1,0 +1,56 @@
+%ifndef _DYN_STACK_SPOOF_HASM_
+%define _DYN_STACK_SPOOF_HASM_
+
+%include "common/asm/common.x64.hasm"
+
+[BITS 64]
+
+; Macros
+%define MAX_ENTRIES_PER_LIST 10
+
+%define arg(basePtr, n) basePtr + 0x8 + (n * 0x8)
+%define var(basePtr, n) basePtr - 0x8 + (n * 0x8)
+
+%imacro mul2 1
+    shl %1, 1
+%endmacro
+
+%imacro defTest 0
+    %define test__
+%endmacro
+
+; Defined strucs
+struc FRAME_TABLE_ENTRY
+    .frameSize              resq 1
+    .p_entryAddr            resq 1
+endstruc
+
+struc PUSH_RBP_FRAME_TABLE_ENTRY
+    .frameSize              resq 1
+    .p_entryAddr            resq 1
+    .rbpOffset              resq 1
+endstruc 
+
+struc STACK_SPOOF_INFO
+    .initialized            resq 1 ; 0x0
+    .entryCountPerList      resq 1 ; 0x8
+
+    .nextCiclicValue        resb 4 ; 0x10
+    .__seedPadding          resd 1 ; 0x14
+
+    .p_entryRetAddr         resq 1 ; 0x18
+
+    .addRspCount            resq 1 ; 0x20
+    .addRspList             resb sizeoflist(FRAME_TABLE_ENTRY, MAX_ENTRIES_PER_LIST)
+
+    .jmpRbxCount            resq 1
+    .jmpRbxList             resb sizeoflist(FRAME_TABLE_ENTRY, MAX_ENTRIES_PER_LIST)
+
+    .setFpRegCount          resq 1
+    .setFpRegList           resb sizeoflist(FRAME_TABLE_ENTRY, MAX_ENTRIES_PER_LIST)
+
+    .pushRbpCount           resq 1
+    .pushRbpList            resb sizeoflist(PUSH_RBP_FRAME_TABLE_ENTRY, MAX_ENTRIES_PER_LIST)
+endstruc
+
+%endif

@@ -1,0 +1,518 @@
+/**
+ * @file common.x64.hasm
+ * @author Alejandro González (@httpyxel)
+ * @brief Common utilities to work with windows x64.
+ * @version 0.1
+ * @date 2024-01-14
+ *
+ * @copyright
+ *   Copyright (C) 2024  Alejandro González
+ *
+ *   This program is free software: you can redistribute it and/or modify
+ *   it under the terms of the GNU General Public License as published by
+ *   the Free Software Foundation, either version 3 of the License, or
+ *   (at your option) any later version.
+ *
+ *   This program is distributed in the hope that it will be useful,
+ *   but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *   GNU General Public License for more details.
+ *
+ *   You should have received a copy of the GNU General Public License
+ *   along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ */
+
+%ifndef _COMMON_HASM_
+%define _COMMON_HASM_
+
+; ==================================================================
+; Do not modify, required by future macros.
+
+%assign __OPEN_OPTS 1
+%assign __NEW_OPTS 0
+
+; ==================================================================
+; Generates compile error if format does not match
+; Params: 
+;   format: desired format
+%macro ENFORCE_FORMAT 1
+%ifnidn __OUTPUT_FORMAT__, %1
+  %error "This file must be compiled for win64"
+%endif
+%endmacro
+
+; ==================================================================
+; C like builtins to obtain the size of an struct by its type name
+
+%define sizeof(type) type%+_size
+%define sizeoflist(type, count) sizeof(type)*count
+
+; ==================================================================
+; Translates to the pointer of the field for the given object
+; Params: 
+;   type: object type
+;   basePtr: pointer to the base of the object
+;   field: field to get the pointer to
+%define fieldPtr(type, basePtr, field)  basePtr + type%+.%+field
+
+; ==================================================================
+; Sets options for function, use along end_opts.
+; Params: 
+;   option: One of the following
+;       > stored_regs: comma separated list of registers to be stored.
+;       > arg_count: number of arguments this function receives.
+;       > local_var_space: space to be reserved in the stack for local use.
+;       > max_callee_arg_count: number of arguments of the called function 
+;                        with the most arguments (if that makes any sense).
+;       > store_args: Boolean to set if we want arguments on rcx, rdx... to 
+;                     be stored in to the stack, this allows using 
+;                     stored_arg(n) to access params from 1 to 4.
+;   value: value to be used for the option.
+;
+; Example:
+;    set_opt stored_regs             , rbp, rsi, rdi
+;    set_opt arg_count               , 6
+;    set_opt local_var_space         , 0x10
+;    set_opt max_callee_arg_count    , 1
+;    set_opt store_args              , true
+;    
+;    end_opts (see end_opts)
+
+%macro set_opt 1-*
+    %ifn __OPEN_OPTS
+        %error "Unexpected use of set_opt, make sure previous functions are correctly formed"
+    %endif
+
+    %ifn __NEW_OPTS
+        __set_defaults
+    %endif
+
+    %assign __NEW_OPTS 1
+
+    %ifidn %1, max_callee_arg_count
+        __max_callee_arg_count_opt_parse %{2:-1}
+        %exitmacro
+    %endif
+
+    %ifidn %1, local_var_space
+        __local_var_space_opt_parse %{2:-1}
+        %exitmacro
+    %endif
+
+    %ifidn %1, stored_regs
+        __stored_regs_opt_parse %{2:-1}
+        %exitmacro
+    %endif
+
+    %ifidn %1, store_args
+        __store_args_opt_parse %{2:-1}
+        %exitmacro
+    %endif
+
+    %ifidn %1, arg_count
+        __arg_count_opt_parse %{2:-1}
+        %exitmacro
+    %endif
+
+    %error "Unknown option"
+%endmacro
+
+; ===================================================================
+; Internal: Sets function option defaults
+%macro __set_defaults 0
+    %define __stored_regs
+    %assign __arg_count 0
+    %assign __max_callee_arg_count 0
+    %assign __local_var_space 0
+    %define __store_args true
+
+    %assign __stored_regs_stack_use 0
+    %assign __local_var_required_size 0
+    %assign __callee_required_stack_space 0
+    %assign __required_stack_space 0
+
+%endmacro
+
+; ===================================================================
+; Applies options set previously, and marks the start of the function code
+%macro end_opts 0
+    %ifn __OPEN_OPTS
+        %error "Unexpected use of end_opts"
+    %endif
+
+    %ifn __NEW_OPTS
+        %warning "end_opts found, but not new options were set"
+        %exitmacro
+    %endif
+
+    %assign __NEW_OPTS 0
+    %assign __OPEN_OPTS 0
+
+    ; This options are undefined at end of function
+    %assign __frame_size 0
+    %assign __args_stored 0
+
+    %assign __required_stack_space __local_var_required_size + __callee_required_stack_space
+
+    ; Why +0x8? Because we have to remember the ret addr!!
+    %if ((__required_stack_space + __stored_regs_stack_use + 0x8) % 0x10) != 0x0
+        %assign __required_stack_space __required_stack_space + 0x8
+    %endif
+
+    %assign __frame_size __required_stack_space
+    sub rsp, __frame_size
+
+    %ifidn __store_args, true
+        __store_args_to_stack __arg_count
+        %assign __args_stored %cond(__arg_count < 4, __arg_count, 4)
+    %endif
+
+    %undef __arg_count
+    %undef __local_var_space
+    %undef __store_args
+
+    %undef __local_var_required_size
+    %undef __callee_required_stack_space
+    %undef __required_stack_space
+
+%endmacro
+
+; ===================================================================
+; Restores the stack and saved registers, then returns, or if given a target as first parameter, jums to it
+; Usage: end_function
+; Usage: end_function destination
+; Usage: end_function new_rsp destination
+;TODO: Add checks
+%macro end_function 0-1
+    %assign __OPEN_OPTS 1
+    
+    __restore_stack
+    __restore_regs
+    
+    %if %0 == 2
+        mov rsp, %2
+        jmp %1
+    %elif %0 == 1
+        jmp %1
+    %else
+        ret
+    %endif
+
+    %undef __frame_size
+    %undef __args_stored
+    
+    %undef __max_callee_arg_count
+    %undef __stored_regs
+    %undef __stored_regs_stack_use
+%endmacro
+
+; ====================================================================
+; argPtr: points to the base of stored args, or 0 if not stored, growing upwards
+; basePtr: points to the base of local variables, growing downwards
+
+%define argPtr %cond(__args_stored > 0, rsp + %eval(__frame_size + __stored_regs_stack_use + 0x8), 0)
+%define basePtr (rsp + __frame_size)
+
+; TODO: write this as a macro, and check that the index doesnt go out of bounds.
+%define local_var(index) basePtr + %eval(0x8*index)
+%define stored_arg(index) %cond(__args_stored > 0, argPtr + %eval(0x8*index), 0)
+
+
+
+; ====================================================================
+; Sets software breakpoint
+; Usage: breakpoint
+
+%define breakpoint int3
+
+; ====================================================================
+; Jumps to label if first param is 0
+; Usage: checkNull var label
+; Params:
+;   var: 64 bit register to ckeck
+;   labbel: destination if 0
+
+%macro checkNull 2
+    test %1, %1
+    jz %2
+%endmacro
+
+; ====================================================================
+; Gets a single byte from a 64 bit register
+; Usage: pickByte outByte inValue byteIndex
+; Params:
+;   outByte: 64 bit register to save the byte to
+;   inValue: 64 bit register containing the value to pick the byte from
+;   byteIndex: 0 starting index of the byte to read
+
+%imacro pickByte 3
+%if %3 >= 8
+    mov %1, 0
+%else
+    mov %1, %2
+    shr  %1, (0x8 * %3)
+    and  %1, 0xff
+%endif
+%endmacro
+
+; ====================================================================
+; Dont use this
+%macro mod 2
+    xor rdx, rdx
+    mov eax, %1
+    div %2
+    mov %1, edx
+%endmacro
+
+; ====================================================================
+; Win64 fastcall helper
+; Usage: fastcall_win64 function, args...
+; Params: 
+;   function: 64 bit register or label pointing to desired function
+;   args: comma separated list of arguments: 64 bit registers, labels or constants
+
+%macro fastcall_win64 1-*
+    %ifndef __max_callee_arg_count
+        %error "fastcall_win64 expects the use of set_max_callee_argcount to check stack usage"
+    %endif
+
+    %assign ARG_COUNT %0 -1
+
+    %if ARG_COUNT > __max_callee_arg_count
+        %error "set_max_callee_argcount specifies an smaller maximun callee argument counter"
+    %endif
+
+    %if ARG_COUNT >= 1
+        mov rcx, %2
+    %endif
+
+    %if ARG_COUNT >= 2
+        mov rdx, %3
+    %endif
+
+    %if ARG_COUNT >= 3
+        mov r8, %4
+    %endif
+
+    %if ARG_COUNT >= 4
+        mov r9, %5
+    %endif
+
+    %define TMP_CALL_TARGET %1
+
+    %if ARG_COUNT > 4
+        %assign STACK_ARG_COUNT ARG_COUNT -4
+        %assign STACK_RUNNER 0x0
+        %rotate 5
+
+        %rep STACK_ARG_COUNT
+            __mov_to_mem_helper [rsp + 0x20 + STACK_RUNNER], %1, rax
+
+            %rotate 1
+            %assign STACK_RUNNER STACK_RUNNER + 0x8
+        %endrep
+        %undef STACK_RUNNER
+    %endif
+
+    call TMP_CALL_TARGET
+    
+    %undef ARG_COUNT
+    %undef TMP_CALL_TARGET
+%endmacro
+
+%macro __mov_to_mem_helper 3
+    %assign is_reg 0
+
+    %ifstr %2
+        %error "Passing an string as fastcall argument is not supported, please store \
+                it in readable memory and pass it as a label or pointer"
+    %endif
+
+    %ifnum %2
+        mov QWORD %1, %2
+        %exitmacro
+    %endif
+
+    %ifid %2
+        %ifndef %2_reg
+            mov %3, %2
+            mov QWORD %1, %3
+        %else
+        mov QWORD %1, %2
+        %endif
+        %exitmacro
+    %endif
+
+    mov %3, QWORD %2
+    mov QWORD %1, %3
+%endmacro
+
+; ==================================================================
+; Used to check if an arg is a register
+; NOTE: Nasm %ifid will return true both for registers and labels, 
+;       so if we want to check wether a parameter is a register or a label,
+;       we can define all registers as follows, then check if <param>_reg is defined
+
+%define rax_reg
+%define rcx_reg
+%define rdx_reg
+%define rbx_reg
+%define rsi_reg
+%define rdi_reg
+%define rsp_reg
+%define rbp_reg
+%define r8_reg
+%define r9_reg
+%define r10_reg
+%define r11_reg
+%define r12_reg
+%define r13_reg
+%define r14_reg
+%define r15_reg
+
+%define as_reg(label) label%+_reg
+
+; Exmple usage: 
+;   Here, memory starting at label exampleLabel should look like 
+;   noReg <0x0> isReg <0x0>
+;
+;   exampleLabel:
+;       %ifdef as_reg(exampleLabel)
+;           db "isReg", 0
+;       %else
+;           db "noReg", 0
+;       %endif
+;       %ifdef as_reg(rax)
+;           db "isReg", 0
+;       %else
+;           db "noReg", 0
+;       %endif
+
+; ====================================================================;
+; Reserve space for callees
+; Usage: __max_callee_arg_count_opt_parse argument_count
+; Params: 
+;   argument_count: Number of arguments of the callee with the most arguments
+
+%macro __max_callee_arg_count_opt_parse 1
+    %ifnnum %1
+        %error "max_callee_arg_count value must be numeric"
+    %endif
+
+    %assign __max_callee_arg_count %1
+
+    %assign __callee_stack_arg_count %cond(__max_callee_arg_count > 4, __max_callee_arg_count - 4, 0)
+
+    %assign __callee_required_stack_space (0x20 + (__callee_stack_arg_count * 0x8))
+
+    %undef __callee_stack_arg_count
+%endmacro
+
+; ====================================================================
+; Reserve space for local variables
+; Usage: __local_var_space_opt_parse size
+; Params: 
+;   size: Number of bytes to reserve, must be divisible by 8
+%macro __local_var_space_opt_parse 1
+    %ifnnum %1
+        %error "local_var_space value must be numeric"
+    %endif
+
+    %if (%1 % 8) != 0x0
+        %error "local_var_space must be multiple of 0x8"
+    %endif
+
+    %assign __local_var_required_size %1
+%endmacro
+
+; ==================================================================
+; Register saving
+; Usage: __stored_regs_opt_parse reg_1, reg_2 ... reg_n
+; Params: 
+;   registers: comma separated list of all registers to save
+%macro __stored_regs_opt_parse 1-*
+    %rep  %0 
+            push    %1 
+            %rotate 1
+    %endrep 
+
+    %define __stored_regs %{-1:1}
+    %assign __stored_regs_stack_use 0x8 * %0
+%endmacro
+
+; ===================================================================
+; Register restoring, pops all registers specified with the last call to store_regs
+; Usage: restore_regs
+
+%macro  __restore_regs 0
+    %ifndef __stored_regs
+        %error "Unexpected use of __restore_regs"
+    %endif
+    __restore_regs_helper __stored_regs
+    %define __stored_regs
+%endmacro
+
+%macro  __restore_regs_helper 1-* 
+  %rep  %0 
+        pop    %1 
+  %rotate 1 
+  %endrep 
+%endmacro
+
+; ===================================================================
+%macro __store_args_opt_parse 1
+    %ifidn %1, true
+        %ifidn %1, false
+            %error "store_args option must be either true or false"
+        %endif
+    %endif
+
+    %define __store_args %1
+%endmacro
+; ===================================================================
+
+%macro __arg_count_opt_parse 1
+    %ifnnum %1
+        %error "arg_count value must be numeric"
+    %endif
+
+    %assign __arg_count %1
+%endmacro
+
+; ===================================================================
+%macro __store_args_to_stack 1
+    %ifnnum %1
+        %error "__store_args_to_stack expects a numeric first paramater"
+    %endif
+
+    %xdefine __arg_ptr %cond(%isdef(__frame_size), (rsp + %eval(__frame_size + __stored_regs_stack_use + 0x8)), (rsp + %eval(__stored_regs_stack_use + 0x8)))
+
+    %if (%1 >= 1)
+        mov [__arg_ptr], rcx
+    %endif
+
+    %if (%1 >= 2)
+        mov [__arg_ptr + 0x8], rdx
+    %endif
+
+    %if (%1 >= 3)
+        mov [__arg_ptr + 0x10], r8
+    %endif
+
+    %if (%1 >= 4)
+        mov [__arg_ptr + 0x18], r9
+    %endif
+
+    %undef __arg_ptr
+%endmacro
+
+; ====================================================================
+; Restores stack to its address rigth after saving all registers (inverse of apply_stack_changes)
+; Usage restore_stack
+
+%macro __restore_stack 0
+    add rsp, __frame_size
+    %assign __frame_size 0
+%endmacro
+
+%endif

@@ -1,0 +1,53 @@
+%ifndef __CALL_DISPATCHER_ASM__
+%define __CALL_DISPATCHER_ASM__
+
+%include "common/asm/common.x64.hasm"
+
+[BITS 64]
+
+; ============== Define symbols =================
+; Exported functions
+GLOBAL __callobf_doCall
+
+EXTERN __callobf_buildSpoofedCallStack
+
+; ============ Define struct types ==============
+struc DLL_ENTRY
+    .name:              resw 4
+    alignb   4
+    .address:           resw 4
+    alignb   4
+endstruc
+
+struc FUN_ENTRY
+    .hash:              resw 2
+    alignb   4
+    .moduleIndex:       resw 2
+    alignb   4
+    .argCount:          resw 2
+    alignb   4
+    .ssn:               resw 2
+    alignb   4
+    .functionPtr:       resw 4
+    alignb   4
+endstruc
+
+struc DLL_TABLE
+    .count:             resw 2
+    alignb   4
+    .__padding:         resw 2
+    alignb   4
+    .entries:           resb DLL_ENTRY_size ; <struct_name>_size is defined for every struct
+    alignb   4
+endstruc
+
+struc FUN_TABLE
+    .count:             resw 2
+    alignb   4
+    .__padding:         resw 2
+    alignb   4
+    .entries:           resb FUN_ENTRY_size
+    alignb   4
+endstruc
+
+%endif
