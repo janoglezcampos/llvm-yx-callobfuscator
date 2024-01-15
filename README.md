@@ -1,10 +1,10 @@
 # LLVM-YX-CALLOBFUSCATOR
 
 
-LLVM plugin to transparently apply stack spoofing and indirect syscalls, if possible, to native Windows X64 calls at compile time.
+LLVM plugin to transparently apply stack spoofing and indirect syscalls, if possible, to Windows x64 native calls at compile time.
 
 
-## "Ive 5 mins, what is this?"
+## "I've 5 mins, what is this?"
 This project is a plugin meant to be used with [opt](https://llvm.org/docs/CommandGuide/opt.html), the LLVM optimizer. Opt will use the pass included in this plugin to hook calls to Windows functions based on a config file and point those calls to a single function, which, given an ID identifying the function to be called, will apply dynamic stack obfuscation, and if the function is a syscall stub, will call it throw indirect syscalling.
 
 
@@ -17,22 +17,22 @@ This project is a plugin meant to be used with [opt](https://llvm.org/docs/Comma
 ## Table of Contents
 > * [Setup](#setup)
 > * [Usage and example](#usage-and-example)
-> * [Developer guide](#developers-guide)
+> * [Developer guide](#developer-guide)
 >   * [File distribution](#file-distribution)
 >   * [How the pass works](#how-the-pass-works)
->   *  [How the dispatching system works](#how-the-dispatching-system-works)
+>   * [How the dispatching system works](#how-the-dispatching-system-works)
 > * [Thanks](#thanks)
 > * [TODO](#todo)
 
 ## Setup
-This setup is written for Windows, but it should be possible to setup this environment in Linux easily. This was tested with LLVM 16.x and 17.x.
+This setup is written for Windows, but it should be possible to setup this environment in Linux easily (still output executables can only be built for Windows x64). This was tested with LLVM 16.x and 17.x.
 
 
 * **Dependencies**:
 
     To be able to compile this project, we mainly need 2 things: LLVM and CMAKE.
 
-    LLVM can be either compiled from source, downloaded from the LLVM releases, or installed through MSYS2. For a guide on how to compile LLVM from source and compile a basic plugin, [see this](). We also need to set up CMAKE and our build tools. Clang is required to compile the helpers library. For the linker, we don't care too much. Lastly, as a generator, I prefer Ninja, but make, nmake or msbuild will work.
+    LLVM can be either compiled from source, downloaded from the LLVM releases, or installed through MSYS2. For a guide on how to compile LLVM from source and compile a basic plugin, [see this](https://github.com/janoglezcampos/llvm-pass-plugin-skeleton?tab=readme-ov-file#llvm-optimization-pass-skeleton). We also need to set up CMAKE and our build tools. Clang is required to compile the helpers library. For the linker, we don't care too much. Lastly, as a generator, I prefer Ninja, but make, nmake or msbuild will work.
 
     Everything listed above can be installed with pacman by using MSYS2.
   * Download and install [MSYS2](https://www.msys2.org/).
@@ -123,8 +123,11 @@ Now you should have ```./build/example.exe```, the final executable.
 
 ## Developer guide
 * ### File distribution
-    The code is always divided into two folders, one called headers, for definitions and macros mainly, and the other called source, containing the actual source code. For every source code file, there is a header file matching the relative path to the source folder, in the headers folder. Documentation for functions is always found at headers files.
-  You will find two source codebases in this project:
+    ---
+    The code is always divided into two folders, one called headers, for definitions and macros mainly, and the other called source, containing the actual source   code. For every source code file, there is a header file matching the relative path to the source folder, in the headers folder. Documentation for functions is    always found at headers files.
+
+
+    You will find two source codebases in this project:
 
   * **CallObfuscatorPlugin**: The actual plugin, written in C++, that will be compiled and linked to a dll.
       * **CallObfuscator**: Includes the logic to transparently apply call obfucation at compile time.
@@ -136,11 +139,12 @@ Now you should have ```./build/example.exe```, the final executable.
     * **common**: Common functionality that is used across the project.
     * **pe**: Utilities to manipulate and work with in-memory PEs.
     * **callDispatcher**: Functionality to invoke Windows native functions applying obfuscation.
-    * **stackSpoof**: Functionality to apply dynamic stack spoofing in Windows X64 environments.
-    * **syscalls**: Utilities to work with Windows X64 syscalls.
+    * **stackSpoof**: Functionality to apply dynamic stack spoofing in Windows x64 environments.
+    * **syscalls**: Utilities to work with Windows x64 syscalls.
 
 
 * ### How the pass works
+    ---
     Knoledge about indirect syscalling, dynamic stack spoofing and common terms like hooks, register, stack... is assumed.
     This is not an in-depth guide, just enough to get you throw the execution flow.
 
@@ -157,10 +161,10 @@ Now you should have ```./build/example.exe```, the final executable.
     A function has its entry partially initialized until it is called; at that moment, ```__callobf_callDispatcher``` will store all the required information to call and obfuscate the function and pass the other arguments to the function being called.
 
 * ### How the dispatching system works
-
+    ---
     The dispatching system starts by initializing the frame table (```__callobf_globalFrameTable```), used to cache posible frames and gadgets that will be used to build the obfuscated stack. The obfuscation method is the same as explained [here](https://klezvirus.github.io/RedTeaming/AV_Evasion/StackSpoofing/), still an outstanding job.
 
-    When __callobf_callDispatcher gets invoked, the following happens:
+    When ```__callobf_globalFrameTable``` gets invoked, the following happens:
   * Loads the function if needed:
     * Gets the dll from the dll table and loads it if needed.
     * Find the function in the IAT and store the address in the function table.
@@ -179,20 +183,18 @@ To Arash Parsa, aka [waldoirc](https://twitter.com/waldoirc), Athanasios Tserpel
 
 ---
 > ## TODO:
+> This includes things that I really dont want to forget, but more stuff could be added here. Not by now
 >### Docs/formatting:
 >* Document functions
->* Mby rename from FRAME_TABLE_ENTRY to something like FRAME_INFO
->* Rename everything realted to pushRbp to saveRbp
->* Somehow improve stackSpoofHelper.x64.asm readability
+>* Check that the setup instruction works.
+>* Somehow improve stackSpoofHelper.x64.asm readability (not today, it works)
 >  
 >### Opsec:
 >* EAF bypass
->* Opsec library loads on the call dispatcher
 >
 >### General quality:
->* Group all globals, or somehow make it clear in the code were all globals are declared
->* Add checks if its safe to delete intructions from parent (the instruction that was replaced by a call)
->* Put MIN_ADD_RSP_FRAME_SIZE to work
+>* Group all globals, or somehow make it clear in the code where all globals are declared.
+>* Put MIN_ADD_RSP_FRAME_SIZE to work.
 >
 >### Functionality:
 >* Handle invoke instructions and exception stuff (should not happen in C but...)

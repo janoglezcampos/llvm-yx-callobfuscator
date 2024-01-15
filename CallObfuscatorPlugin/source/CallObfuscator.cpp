@@ -1,7 +1,7 @@
 /**
  * @file CallObfuscator.cpp
  * @author Alejandro González (@httpyxel)
- * @brief Includes the logic to transparently apply call obfucation at compile time.
+ * @brief Includes the logic needed to transparently apply call obfucation at compile time.
  * @version 0.1
  * @date 2024-01-14
  *
@@ -183,7 +183,7 @@ namespace callobfuscator
         StructType *p_dllTableEntryStruct = StructType::create(ctx, "_DLL_TABLE_ENTRY");
 
         p_dllTableEntryStruct->setBody(
-            {PointerType::get(ctx, 0), // Chars are just 8 bit numbers, cant find a CHAR type so this should work (can I set it to unsigned¿?¿)
+            {PointerType::get(ctx, 0),
              PointerType::get(ctx, 0)},
             true);
 
@@ -382,6 +382,7 @@ namespace callobfuscator
         int functionTableIndex = 0;
 
         for (FunctionInfo &info : functionList)
+        {
             for (auto &use : info.function.uses())
                 if (!replaceUse(use, functionTableIndex++))
                 {
@@ -390,6 +391,7 @@ namespace callobfuscator
 
                     return false;
                 }
+        }
 
         __changedModule = true;
         return true;
