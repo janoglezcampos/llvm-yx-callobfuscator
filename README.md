@@ -11,7 +11,7 @@ This project is a plugin meant to be used with [opt](https://llvm.org/docs/Comma
 
 ## Table of Contents
 * [Setup](#setup)
-* [Usage](#usage-and-example)
+* [Usage and example](#usage-and-example)
 * [Developer guide](#developers-guide)
   * [File distribution](#file-distribution)
   * [How the pass works](#how-the-pass-works)
@@ -27,15 +27,14 @@ This setup is written for Windows, but it should be possible to setup this envir
   To be able to compile this project, we mainly need 2 things: LLVM and CMAKE.
 
 
-  LLVM can be either compiled from source, downloaded from the LLVM releases or installed throw msys. For a guide on how to compile LLVM from source and compile a basic plugin, [see this]().
-  Once we have LLVM, we need to set up CMAKE and our build tools. Clang is required to compile the helpers library. For the linker we dont care too much. Lastly, as a generator, I prefer Ninja, but make, nmake or msbuild will work.
+  LLVM can be either compiled from source, downloaded from the LLVM releases or installed throw MSYS2. For a guide on how to compile LLVM from source and compile a basic plugin, [see this]().
+  We also need to set up CMAKE and our build tools. Clang is required to compile the helpers library. For the linker we dont care too much. Lastly, as a generator, I prefer Ninja, but make, nmake or msbuild will work.
   
-  Everything listed about can be installed with pacman by using MSYS2, so lets do that.
+  Everything listed above can be installed with pacman by using MSYS2, so lets do that.
   * Download and install [MSYS2](https://www.msys2.org/).
   * Launch an MSYS2 mingw64 terminal, and install the following packages:
-  * Install LLVM: ```pacman -S mingw-w64-x86_64-llvm```
+  * Install LLVM : ```pacman -S mingw-w64-x86_64-llvm```
   * Install Clang: ```pacman -S mingw-w64-x86_64-clang```
-  * Optionally install Ld: ```pacman -S mingw-w64-x86_64-ld```
   * Install Cmake: ```pacman -S mingw-w64-x86_64-cmake```
   * Install Ninja: ```pacman -S mingw-w64-x86_64-ninja```
 
@@ -82,6 +81,12 @@ The plugin will get the path to the config from an enviroment variable called ``
 Now is time to run the pass, remember that there is a makefile already set up inside the example project. To better understand the process shown here, [see this](https://github.com/janoglezcampos/llvm-pass-plugin-skeleton?tab=readme-ov-file#running-you-pass).
 
 * Go inside the example folder, create a build folder; inside, create 2 folders: irs and objs. 
+    
+        cd example; mkdir build; mkdir build/irs; mkdifr build/objs
+
+* Set ```LLVM_OBF_FUNCTIONS``` to point to the full path of ```callobfuscator.conf```, only for this terminal:
+    * MSYS2/Linux: ```export LLVM_OBF_FUNCTIONS=<absolute path to callobfuscator.conf>```
+    * Windows PowerShell: ```env:LLVM_OBF_FUNCTIONS=<absolute path to callobfuscator.conf>```
 * Compile the C files to LLVM-IR:
   
         clang -O0 -Xclang -disable-O0-optnone -S -emit-llvm ./source/utils.c -Iheaders -o ./build/irs/utils.ll
