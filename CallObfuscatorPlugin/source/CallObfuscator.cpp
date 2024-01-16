@@ -354,7 +354,9 @@ namespace callobfuscator
             {IntegerType::get(ctx, 32)},
             true);
 
-        // TODO: Check if already existed for some reason
+        if (mod.getFunction("__callobf_callDispatcher"))
+            return false;
+
         callDispatcher = mod.getOrInsertFunction("__callobf_callDispatcher", p_dispatcherType);
         return true;
     }
