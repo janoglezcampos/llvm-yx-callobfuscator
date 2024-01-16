@@ -1,10 +1,34 @@
+/**
+ * @file syscalls.h
+ * @author Alejandro González (@httpyxel)
+ * @brief Utilities to work with windows x64 syscalls.
+ * @version 0.1
+ * @date 2024-01-14
+ *
+ * @copyright
+ *   Copyright (C) 2024  Alejandro González
+ *
+ *   This program is free software: you can redistribute it and/or modify
+ *   it under the terms of the GNU General Public License as published by
+ *   the Free Software Foundation, either version 3 of the License, or
+ *   (at your option) any later version.
+ *
+ *   This program is distributed in the hope that it will be useful,
+ *   but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *   GNU General Public License for more details.
+ *
+ *   You should have received a copy of the GNU General Public License
+ *   along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ */
+
 #ifndef _SYSCALLS_H_
 #define _SYSCALLS_H_
 
 #include "common/common.h"
 
-// ==========================================================
-// ================= STRUCT DEFINITIONS =====================
+// ==============================================================================
+// ============================ STRUCT DEFINITIONS ==============================
 
 typedef struct _SYSCALL_ITER_CTX
 {
@@ -13,8 +37,8 @@ typedef struct _SYSCALL_ITER_CTX
     DWORD64 lastEntry;
 } SYSCALL_ITER_CTX, *PSYSCALL_ITER_CTX;
 
-// ==========================================================
-// ================= PUBLIC  FUNCTIONS ======================
+// ==============================================================================
+// ============================ PUBLIC  FUNCTIONS ===============================
 
 /**
  * @brief Given the address of ntdll, initializes a syscall iterator context.
@@ -45,8 +69,8 @@ BOOL __callobf_iterateSyscalls(
     PVOID *pp_functionAddr);
 
 /**
- * @brief Given a function name hash and a pointer to ntdll, checks if the function is
- *        a syscall, if it is, returns its ssn and syscall pointer.
+ * @brief Given a function name hash and a pointer to ntdll, checks if the function
+ *        is a syscall, if it is, returns its ssn and syscall pointer.
  *
  * @param nameHash 32 bit hash of the function name.
  * @param p_ntdll Pointer to ntdll.

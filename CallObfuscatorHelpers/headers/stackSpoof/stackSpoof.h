@@ -1,10 +1,36 @@
+/**
+ * @file stackSpoof.h
+ * @author Alejandro González (@httpyxel)
+ * @brief Functionality to apply dynamic stack spoofing in windows x64 enviroments.
+ * @version 0.1
+ * @date 2024-01-14
+ *
+ * @copyright
+ *   Copyright (C) 2024  Alejandro González
+ *
+ *   This program is free software: you can redistribute it and/or modify
+ *   it under the terms of the GNU General Public License as published by
+ *   the Free Software Foundation, either version 3 of the License, or
+ *   (at your option) any later version.
+ *
+ *   This program is distributed in the hope that it will be useful,
+ *   but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *   GNU General Public License for more details.
+ *
+ *   You should have received a copy of the GNU General Public License
+ *   along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ */
+
+// Many thanks to the project showing this idea: https://github.com/klezVirus/klezVirus.github.io
+
 #ifndef _DYN_STACK_SPOOF_H_
 #define _DYN_STACK_SPOOF_H_
 
 #include "common/common.h"
 
-// ==========================================================
-// ================= MACRO DEFINITIONS ======================
+// ==============================================================================
+// ============================= MACRO DEFINITIONS ==============================
 
 // Constants:
 #define MAX_ENTRIES_PER_LIST 10
@@ -24,8 +50,8 @@
 // Utils:
 #define REQUIRED_STACK(NARGS) (((POSITIVE_OR_ZERO(NARGS - 4) * 8) + 0x20) | 8)
 
-// ==========================================================
-// ================= STRUCT DEFINITIONS =====================
+// ==============================================================================
+// ============================ STRUCT DEFINITIONS ==============================
 
 typedef struct _FRAME_INFO
 {
@@ -66,12 +92,13 @@ typedef struct _FRAME_TABLE
 
 #pragma pack(pop)
 
-// ==========================================================
-// ================= EXTERNAL GLOBALS =======================
+// ==============================================================================
+// =========================== EXTERNAL GLOBALS =================================
 
 extern STACK_SPOOF_INFO __callobf_globalFrameTable;
-// ==========================================================
-// ================ EXTERNAL FUNCTIONS ======================
+
+// ==============================================================================
+// =========================== EXTERNAL FUNCTIONS ===============================
 
 /**
  * @brief Given stack spoof info, build a new spoofed stack picking different
@@ -84,8 +111,8 @@ extern STACK_SPOOF_INFO __callobf_globalFrameTable;
  */
 extern PVOID __callobf_buildSpoofedCallStack(PSTACK_SPOOF_INFO);
 
-// ==========================================================
-// ================= PUBLIC  FUNCTIONS ======================
+// ==============================================================================
+// ============================ PUBLIC  FUNCTIONS ===============================
 
 /**
  * @brief Given a module, finds the gadgets specified by the convination
@@ -110,9 +137,9 @@ DWORD64 __callobf_fillGadgetTable(
     SIZE_T gadgetSize);
 
 /**
- * @brief Given a module, finds frames containing UWOP_SET_FPREG. For every
- *        found gadget, writes its frame info into the list given in p_entryList,
- *        until no more frames are or the number of frames found equals maxEntries.
+ * @brief Given a module, finds frames containing UWOP_SET_FPREG. For every found
+ *        gadget, writes its frame info into the list given in p_entryList, until
+ *        no more frames are or the number of frames found equals maxEntries.
  *
  * @param p_module Module to search frames from.
  * @param p_entryList List of frame info to add the frames to.
@@ -141,8 +168,8 @@ DWORD64 __callobf_fillSaveRbpFrameTable(
     DWORD64 maxEntries);
 
 /**
- * @brief Given a partially initialized stack spoof info, fills the four lists of frames
- *        needed at runtime.
+ * @brief Given a partially initialized stack spoof info, fills the four lists of
+ *        frames needed at runtime.
  *
  * @param p_stackSpoofInfo Pointer to spoof info containing the lists to be fille.
  * @param p_module Module to search frames from.
