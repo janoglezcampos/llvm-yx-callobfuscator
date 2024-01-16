@@ -289,7 +289,6 @@ BOOL __callobf_fillStackSpoofTables(PSTACK_SPOOF_INFO p_stackSpoofInfo, PVOID p_
     if (!p_stackSpoofInfo || !p_module)
         return FALSE;
 
-    // Fill addRsp table
     if (!(p_stackSpoofInfo->addRspCount = __callobf_fillGadgetTable(
               p_module,
               p_stackSpoofInfo->addRspList,
@@ -299,7 +298,6 @@ BOOL __callobf_fillStackSpoofTables(PSTACK_SPOOF_INFO p_stackSpoofInfo, PVOID p_
               ADD_RSP_GADGET_SIZE)))
         return FALSE;
 
-    // Fill jmpRbx table
     if (!(p_stackSpoofInfo->jmpRbxCount = __callobf_fillGadgetTable(
               p_module,
               p_stackSpoofInfo->jmpRbxList,
