@@ -43,10 +43,8 @@ PVOID __callobf_getModuleAddrH(const UINT32 moduleHash)
     PLIST_ENTRY ent;
     PLIST_ENTRY hdr;
 
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Warray-bounds"
-    peb = NtCurrentTeb()->ProcessEnvironmentBlock;
-#pragma GCC diagnostic pop
+    NOWARN("-Warray-bounds",
+           peb = NtCurrentTeb()->ProcessEnvironmentBlock;)
 
     ldr = peb->Ldr;
     hdr = &ldr->InLoadOrderModuleList;

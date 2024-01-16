@@ -27,7 +27,7 @@
 
 #include "common/common.h"
 
-#ifdef DEBUG
+#ifdef __CALLOBF_DEBUG
 
 // ==============================================================================
 // =========================== EXTERNAL FUNCTIONS ===============================
@@ -44,11 +44,15 @@ extern int printf(const char *format, ...);
         printf("[+] DEBUG: %s:%d:%s(): " fmt "\n", __FILE__, __LINE__, __func__ __VA_OPT__(, ) __VA_ARGS__); \
     } while (0);
 
-#define DEBUG_PRINT_PTR(ptr) DEBUG_PRINT(p_agent, "PTR %s: %p", #ptr, ptr);
-#define BREAKPOINT      \
-    do                  \
-    {                   \
-        __debugbreak(); \
+#define DEBUG_PRINT_PTR(ptr) DEBUG_PRINT("PTR %s: %p", #ptr, ptr);
+
+// Basic idea here: I want to be able to run this without a debugger while
+// testing, and still keep my breakpoints in place.
+#define BREAKPOINT()                                                \
+    do                                                              \
+    {                                                               \
+        if (NtCurrentTeb()->ProcessEnvironmentBlock->BeingDebugged) \
+            __debugbreak();                                         \
     } while (0);
 #else
 #define DEBUG_PRINT(...) \
@@ -59,9 +63,9 @@ extern int printf(const char *format, ...);
     do                       \
     {                        \
     } while (0);
-#define BREAKPOINT \
-    do             \
-    {              \
+#define BREAKPOINT() \
+    do               \
+    {                \
     } while (0);
 #endif
 

@@ -23,6 +23,7 @@
  */
 
 #include "common/commonUtils.h"
+#include "common/debug.h"
 
 BOOL __callobf_srand(PDWORD p_ctx, DWORD seed)
 {
@@ -116,7 +117,7 @@ PVOID __callobf_findBytes(
     BYTE maskByte = 0;
     DWORD matches = 0;
 
-    if (!bytes || mask)
+    if (!bytes || !mask)
         return NULL;
 
     for (DWORD_PTR j = (DWORD_PTR)startAddr; j < ((DWORD_PTR)endAddr - byteCount); j++)

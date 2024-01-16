@@ -36,21 +36,12 @@ unsigned long __callobf_getLastError()
 
 HMODULE __callobf_loadLibrary(PCHAR p_dllName)
 {
-    /*
-    PVOID p_kernel32 = __callobf_getModuleAddrA("kernelbase.dll");
-    PLOADLIBRARYAp_LoadLibraryA = __callobf_getFunctionAddrA(p_kernel32, "LoadLibraryA");
-    if (!p_LoadLibraryA)
-    {
-        DEBUG_PRINT("Error, couldnt get ptr to LoadLibraryA");
-        return NULL;
-    }
-    */
     DWORD loadLibraryIndex = -1;
 
     if (!p_dllName)
         return NULL;
 
-    for (DWORD i = 0; __callobf_functionTable.count; i++)
+    for (DWORD i = 0; i < __callobf_functionTable.count; i++)
         if (__callobf_functionTable.entries[i].hash == __callobf_hashA("LoadLibraryA"))
             loadLibraryIndex = i;
 
@@ -93,6 +84,7 @@ void *__callobf_loadFunction(PFUNCTION_TABLE_ENTRY p_fEntry)
     p_fEntry->ssn = 0;
     if (moduleHash == __callobf_hashA("ntdll.dll"))
     {
+        DEBUG_PRINT("Is ntdll");
         if (__callobf_loadSyscall(p_fEntry->hash, p_dllEntry->handle, &ssn, &p_function))
         {
             isSyscall = TRUE;
@@ -157,5 +149,7 @@ void *__callobf_callDispatcher(DWORD32 index, ...)
         isSyscall = TRUE;
     }
 
+    DEBUG_PRINT("Dispatching index %u", index);
+    BREAKPOINT();
     return __callobf_doCall(p_function, ssn, isSyscall, argCount, p_args, p_returnAddress, &__callobf_globalFrameTable);
 }

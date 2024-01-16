@@ -80,7 +80,7 @@ namespace callobfuscator
 
         FunctionInfo info = functionInfo;
         bool found = false;
-        for (auto entry : functionList) // This hole looks so bad
+        for (auto entry : functionList) // This thing looks so bad
         {
             if (entry.function.getName().equals(info.function.getName()))
             {
@@ -104,7 +104,6 @@ namespace callobfuscator
             }
 
             info.argCount = info.function.arg_size();
-
             functionList.push_back(info);
         }
 
@@ -167,6 +166,9 @@ namespace callobfuscator
             true);
 
         *pp_functionTableStruct = p_functionTableStruct; // This doesnt seem rigth xd, expecting that the lifetime of p_functionTableStruct is enough :P
+
+        outs() << "[INFO] Number of elements in funcion table: " << p_functionTableArrayDef->getNumElements()
+               << "\n";
 
         return ConstantStruct::get(p_functionTableStruct,
                                    {ConstantInt::get(IntegerType::get(ctx, 32), p_functionTableArrayDef->getNumElements()),
@@ -333,7 +335,6 @@ namespace callobfuscator
 
     bool CallObfuscator::replaceUse(Use &use, int functionTableIndex)
     {
-        outs() << "[INFO] Replacing use\n";
         // TODO: Handle invoke instructions and exception stuff (should not happen in C but...)
         // TODO: Handle indirect calls
         // TODO: Handle address reads
@@ -385,14 +386,16 @@ namespace callobfuscator
 
         for (FunctionInfo &info : functionList)
         {
+            outs() << "[INFO] Hooking calls to " << info.function.getName() << " using index " << functionTableIndex << " \n";
             for (auto &use : info.function.uses())
-                if (!replaceUse(use, functionTableIndex++))
+                if (!replaceUse(use, functionTableIndex))
                 {
                     outs() << "[ERROR] Unsuported use, code may break, aborting"
                            << "\n";
 
                     return false;
                 }
+            functionTableIndex++;
         }
 
         __changedModule = true;

@@ -77,7 +77,7 @@ namespace callobfuscatorpass
             return false;
         }
 
-        outs() << "[INFO] : Using config: " << config << "\n";
+        outs() << "[INFO] Using config: " << config << "\n";
 
         jsonObj = *ParseResult.get().getAsObject();
         return true;
@@ -160,30 +160,28 @@ namespace callobfuscatorpass
                 return PreservedAnalyses::all();
         }
 
-        outs() << "[INFO] : Analyzing module: " << M.getName() << "\n";
+        outs() << "[INFO] Analyzing module: " << M.getName() << "\n";
 
         callobfuscator::CallObfuscator obf = callobfuscator::CallObfuscator(M);
 
-        if (!M.getFunction("LoadLibraryA"))
-        {
-            LLVMContext &ctx = M.getContext();
-            FunctionType *p_loadLibraryType = FunctionType::get(
-                PointerType::get(ctx, 0),
-                {PointerType::get(ctx, 0)},
-                false);
-
-            M.getOrInsertFunction("__callobf_callDispatcher", p_loadLibraryType);
-            outs() << "[INFO] : Inserted LoadLibraryA definition" << M.getName() << "\n";
-        }
+        LLVMContext &ctx = M.getContext();
+        FunctionType *p_loadLibraryType = FunctionType::get(
+            PointerType::get(ctx, 0),
+            {PointerType::get(ctx, 0)},
+            false);
+        FunctionCallee c = M.getOrInsertFunction("LoadLibraryA", p_loadLibraryType);
+        Function &loadLibrary = cast<Function>(*c.getCallee());
+        obf.addHook({loadLibrary, "kernel32.dll", false, 0});
 
         for (Function &F : M)
         {
             StringRef dllName;
+
             if (isFunctionHooked(F.getName(), dllName))
             {
                 if (!obf.addHook({F, dllName, false, 0}))
                 {
-                    outs() << "[INFO] : Something went wrong while preparing the hooks... "
+                    outs() << "[INFO] Something went wrong while preparing the hooks... "
                            << "\n";
                     return PreservedAnalyses::all();
                 }
@@ -198,7 +196,7 @@ namespace callobfuscatorpass
         if (obf.changedModule())
             return PreservedAnalyses::none();
 
-        outs() << "[INFO] : Module not modified"
+        outs() << "[INFO] Module not modified"
                << "\n";
 
         return PreservedAnalyses::all();

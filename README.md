@@ -27,6 +27,7 @@ This project is a plugin meant to be used with [opt](https://llvm.org/docs/Comma
 ## Setup
 This setup is written for Windows, but it should be possible to setup this environment in Linux easily (still output executables can only be built for Windows x64). This was tested with LLVM 16.x and 17.x.
 
+All the commands run in the following steps are supossed to be used in an MSYS2 terminal ie they have Linux format.
 
 * **Dependencies**:
 
@@ -45,7 +46,7 @@ This setup is written for Windows, but it should be possible to setup this envir
     * Install Ninja: ```pacman -S mingw-w64-x86_64-ninja```
     * Install Git: ```pacman -S git```
 
-    Restart the terminal, It may help with env variables, and gives luck for the followinf building ritual.
+    Restart the MSYS2 terminal, It may help with env variables, and gives luck for the followinf building ritual.
 * **Building**:
   
     First, clone this project, pretty obvious:
@@ -67,7 +68,6 @@ This setup is written for Windows, but it should be possible to setup this envir
 
     Choose an install location. I recommend doing this so it will be easier to either get the files in the right place or just be able to pick them up easily. Also, the [usage](#usage-and-example) section will use this folder as the relative folder for accessing these files, so if you add it to the PATH, the commands will work right away. I use  ```C:/Users/<my-user>/llvm-plugins```, but creating a folder in the project directory called ```install```, side by side with ```build``` will do. This folder will not be edited if you don't run the install command, but you will have to go get the files in the build folder.
 
-
     Configure the project; here you specify the installation folder. ```DCMAKE_BUILD_TYPE``` will set the default mode: Debug, Release or MinSizeRel. Depending on which generator you are using, you are going to be able to change this later or not. I use Nija as the generator, but you can use any other.
 
         cmake -G Ninja -DCMAKE_INSTALL_PREFIX="<path_to_install_folder>" -DCMAKE_BUILD_TYPE=Release ./..
@@ -85,10 +85,18 @@ This setup is written for Windows, but it should be possible to setup this envir
     * ```CallObfuscatorPlugin.dll```:  The actual plugin, written in C++, that will be compiled and linked to a dll.
 
     Once all this is done I like to add the path I used to install the plugin to the user path, so it is easier to import it after.
+    To do this, add the following line to ```~/.bash_profile``` if exists, if not, add it to ```~/.profile```. Also, modify the library path, so you wont need to specify the path to helpers everytime you link.
+
+        export PATH=$PATH:"<path_to_install_folder>"
+        export LIBRARY_PATH=$ LIBRARY_PATH:"<path_to_install_folder>/plugin-helpers"
+
+    Remember the path format changes from Windows, where C: becomes /c/ (because PATH separator is ```:```), for example, in my case would:
+
+        export PATH=$PATH:"/c/Users/<user>/llvm-plugins"
+        export LIBRARY_PATH=$LIBRARY_PATH:"/c/Users/<user>/llvm-plugins/plugin-helpers"
+     
 
 ## Usage and example
-All the commands run here are supossed to be used in an MSYS2 terminal ie they have Linux format.
-
 First of all, we need to set up our configuration file. In this section, we will be building the project found in the example folder, so the config file is already made. You can add any number of functions to the file, and the functions do not need to appear in the program.
 
 The plugin will get the path to the config from an environment variable called ```LLVM_OBF_FUNCTIONS```. You can either add it along with all the other environment variables for the user, the system, or just set it up for the current terminal. You can also set it in the makefile, so it is only set for the compilation.
@@ -129,12 +137,15 @@ Now is time to run the pass. Remember that there is a makefile already set up in
 
 * Compile to windows x86_64 assembly:
   
-        llc --mtriple=x86_64-pc-windows-msvc -filetype=obj  ./build/irs/example.op.ll -o ./build/objs/example.obj
+        llc --mtriple=x86_64-pc-windows-msvc -filetype=obj ./build/irs/example.op.ll -o ./build/objs/example.obj
 
 * Link:
 
-        clang ./build/objs/example.obj -o ./build/example.exe
+        clang ./build/objs/example.obj -o ./build/example.exe -L"<path_to_install_folder>/plugin-helpers" -lCallObfuscatorHelpers 
 
+    If added helpers path to LIBRARY_PATH then you can ommit the ```-L``` option.
+
+        clang ./build/objs/example.obj -o ./build/example.exe -lCallObfuscatorHelpers
 
 Now you should have ```./build/example.exe```, the final executable.
 
@@ -213,10 +224,9 @@ To Arash Parsa, aka [waldoirc](https://twitter.com/waldoirc), Athanasios Tserpel
 >### General quality:
 >* Group all globals, or somehow make it clear in the code where all globals are declared.
 >* Put MIN_ADD_RSP_FRAME_SIZE to work.
->* Better error propagation and implement callObfGetLastError() PRERELEASE
+>* Better error propagation and implement callObfGetLastError()
 >* Optionally validate config file entries against local dlls.
 >* Optionally return load errors through messagebox pop ups, similarly to what ms does with CRTs.
->* Check that new loadlibrary works. PRERELEASE
 >
 >### Functionality:
 >* Handle invoke instructions and exception stuff (should not happen in C but...)

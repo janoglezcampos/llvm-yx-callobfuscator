@@ -1,4 +1,7 @@
-set(CLANG_RELEASE_OPTIONS "-O3;-nostdlib;-ffunction-sections;-Wall;-Wextra;-fno-ident")
+set(CLANG_DEBUG_OPTIONS "-D__CALLOBF_DEBUG")
+set(CLANG_RELEASE_OPTIONS "-O3 -nostdlib -ffunction-sections -Wall -Wextra -fno-ident")
+
+set(NASM_DEBUG_OPTIONS "")
 set(NASM_RELEASE_OPTIONS "")
 
 #find ./source -type f -name "*.c"
@@ -21,7 +24,18 @@ target_include_directories(CallObfuscatorHelpers PRIVATE headers)
 set_target_properties(CallObfuscatorHelpers PROPERTIES PREFIX "lib")
 set_target_properties(CallObfuscatorHelpers PROPERTIES CXX_STANDARD 17)
 
-target_compile_options(CallObfuscatorHelpers PRIVATE "$<$<CONFIG:RELEASE>:$<$<COMPILE_LANGUAGE:C>:${CLANG_RELEASE_OPTIONS}>>")
-target_compile_options(CallObfuscatorHelpers PRIVATE "$<$<CONFIG:RELEASE>:$<$<COMPILE_LANGUAGE:ASM_NASM>:${NASM_RELEASE_OPTIONS}>>")
+set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} ${CLANG_DEBUG_OPTIONS}")
+set(CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE} ${CLANG_RELEASE_OPTIONS}")
+set(CMAKE_C_FLAGS_MINSIZEREL "${CMAKE_C_FLAGS_MINSIZEREL} ${CLANG_RELEASE_OPTIONS}")
+
+set(CMAKE_NASM_FLAGS_DEBUG "${CMAKE_NASM_FLAGS_DEBUG} ${NASM_DEBUG_OPTIONS}")
+set(CMAKE_NASM_FLAGS_RELEASE "${CMAKE_NASM_FLAGS_RELEASE} ${NASM_RELEASE_OPTIONS}")
+set(CMAKE_NASM_FLAGS_MINSIZEREL "${CMAKE_NASM_FLAGS_MINSIZEREL} ${NASM_RELEASE_OPTIONS}")
+
+#target_compile_options(CallObfuscatorHelpers PRIVATE "$<$<CONFIG:MINSIZEREL>:$<$<COMPILE_LANGUAGE:C>:${CLANG_RELEASE_OPTIONS}>>")
+#target_compile_options(CallObfuscatorHelpers PRIVATE "$<$<CONFIG:RELEASE>:$<$<COMPILE_LANGUAGE:C>:${CLANG_RELEASE_OPTIONS}>>")
+
+#target_compile_options(CallObfuscatorHelpers PRIVATE "$<$<CONFIG:MINSIZEREL>:$<$<COMPILE_LANGUAGE:ASM_NASM>:${NASM_RELEASE_OPTIONS}>>")
+#target_compile_options(CallObfuscatorHelpers PRIVATE "$<$<CONFIG:RELEASE>:$<$<COMPILE_LANGUAGE:ASM_NASM>:${NASM_RELEASE_OPTIONS}>>")
 
 install(TARGETS CallObfuscatorHelpers DESTINATION ${PROJECT_NAME}/plugin-helpers)

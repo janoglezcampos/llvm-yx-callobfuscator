@@ -88,23 +88,62 @@ BOOL __callobf_getNextSyscall(PSYSCALL_ITER_CTX p_ctx, PCHAR *pp_name, PVOID *pp
     return FALSE;
 }
 
+// TODO: Doc this
+UINT32 __callobf_hashSyscallAsZw(PCHAR p_str)
+{
+    UINT h = 0;
+    PCHAR p;
+    CHAR c;
+
+    if (!p_str)
+        return 0;
+
+    if (p_str[0] == 0 || p_str[1] == 0)
+        return 0;
+
+    h = HASH_MULTIPLIER * h + 'z';
+    h = HASH_MULTIPLIER * h + 'w';
+    p_str += 2;
+
+    for (p = p_str; *p != '\0'; p++)
+    {
+        c = (*p >= 65 && *p <= 90) ? *p + 32 : *p;
+        h = HASH_MULTIPLIER * h + c;
+    }
+    return h;
+}
+
+UINT32 __callobf_hashSyscallAsNt(PCHAR p_str)
+{
+    UINT h = 0;
+    PCHAR p;
+    CHAR c;
+
+    if (!p_str)
+        return 0;
+
+    if (p_str[0] == 0 || p_str[1] == 0)
+        return 0;
+
+    h = HASH_MULTIPLIER * h + 'n';
+    h = HASH_MULTIPLIER * h + 't';
+    p_str += 2;
+
+    for (p = p_str; *p != '\0'; p++)
+    {
+        c = (*p >= 65 && *p <= 90) ? *p + 32 : *p;
+        h = HASH_MULTIPLIER * h + c;
+    }
+    return h;
+}
+
 BOOL __callobf_checkHashSyscallA(PCHAR p_functionName, DWORD32 hash)
 {
     if (!p_functionName)
         return FALSE;
 
-    WORD backup = *(PWORD)p_functionName;
-    // 0x775A = wZ (little endian)
-    // 0x744E = tN (little endian)
-
-    if (backup != 0x775A && backup != 0x744E)
-        return FALSE;
-
-    *(PWORD)p_functionName = 0x775A;
-    DWORD32 hashAsZw = __callobf_hashA(p_functionName);
-
-    *(PWORD)p_functionName = 0x744E;
-    DWORD32 hashAsNt = __callobf_hashA(p_functionName);
+    DWORD32 hashAsNt = __callobf_hashSyscallAsNt(p_functionName);
+    DWORD32 hashAsZw = __callobf_hashSyscallAsZw(p_functionName);
 
     return (BOOL)(hash == hashAsZw || hash == hashAsNt);
 }

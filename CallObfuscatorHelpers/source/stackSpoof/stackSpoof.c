@@ -76,7 +76,21 @@ DWORD64 __callobf_fillGadgetTable(
 
     while ((p_gadget = __callobf_findBytes(gadgetLowerSearch, gadgetHigherSearch, p_gadgetBytes, p_mask, gadgetSize)))
     {
-        gadgetLowerSearch = (PVOID)((DWORD_PTR)p_gadget + gadgetSize);
+        gadgetLowerSearch = (PVOID)((DWORD_PTR)p_gadget + gadgetSize + 0x1);
+
+        // TODO: This incredibly horrible, find a better way to define this function, so it includes the
+        //       case of gadgets with variable values
+
+        // Values over 0x7F, change the compilation, so add rsp, 0x75 will be our bigger possible
+        // value wich means 15 args
+        // This could be done by a pattern like 0x78C48348, but I want to eventually build a more robust system capable
+        // of selecting different sizes.
+        if (*(PDWORD32)p_gadgetBytes == 0x90C48348) // ADD_RSP_GADGET
+        {
+            DWORD32 delta = ((*(PDWORD32)p_gadget) >> 24) & 0xFF;
+            if (delta != 0x78)
+                continue;
+        }
 
         if (entryCount >= maxEntries)
             break;
@@ -87,7 +101,6 @@ DWORD64 __callobf_fillGadgetTable(
 
         if (!__callobf_createOrResetUwopIterator(&uwopCtx, p_module, p_unwindInfo))
             return entryCount;
-
         frameSize = 0;
         valid = TRUE;
 
@@ -118,6 +131,7 @@ DWORD64 __callobf_fillGadgetTable(
             entryCount++;
         }
     }
+
     return entryCount;
 }
 
@@ -324,6 +338,13 @@ BOOL __callobf_fillStackSpoofTables(PSTACK_SPOOF_INFO p_stackSpoofInfo, PVOID p_
               p_stackSpoofInfo->saveRbpList,
               p_stackSpoofInfo->entryCountPerList)))
         return FALSE;
+    DEBUG_PRINT("\n");
+    DEBUG_PRINT("Correctly initialized table");
+    DEBUG_PRINT("addRspCount:   %llu", p_stackSpoofInfo->addRspCount);
+    DEBUG_PRINT("jmpRbxCount:   %llu", p_stackSpoofInfo->jmpRbxCount);
+    DEBUG_PRINT("setFpRegCount: %llu", p_stackSpoofInfo->setFpRegCount);
+    DEBUG_PRINT("saveRbpCount:  %llu\n", p_stackSpoofInfo->saveRbpCount);
+
     return TRUE;
 }
 
@@ -342,13 +363,17 @@ BOOL __callobf_initializeSpoofInfo(PSTACK_SPOOF_INFO p_stackSpoofInfo)
     if (!p_ntdll)
         return FALSE;
 
+    DEBUG_PRINT("Filling spoof tables");
     if (!__callobf_fillStackSpoofTables(p_stackSpoofInfo, p_kernelBase))
         return FALSE;
 
+    DEBUG_PRINT("Correctly filled tables");
     if (!(p_stackSpoofInfo->p_entryRetAddr = __callobf_findEntryAddressOfReturnAddress(p_ntdll, p_kernel32)))
         return FALSE;
 
     p_stackSpoofInfo->initialized = TRUE;
+
+    BREAKPOINT();
 
     return TRUE;
 }
