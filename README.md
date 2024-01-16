@@ -149,6 +149,8 @@ Now is time to run the pass. Remember that there is a makefile already set up in
 
 Now you should have ```./build/example.exe```, the final executable.
 
+In case you are thinking that those are a lot of commands, well, they are always "the same", so writing makefiles helps, Im leaving a makefile example inside the example folder to compile the same code as before.
+
 ## Developer guide
 * ### File distribution
     ---
