@@ -26,10 +26,10 @@ AR = ar
 LLVM_LINK = llvm-link
 LLVM_LINK_FLAGS = -S
 
-OBF_PLUGIN_PATH =
-OBF_PASS_NAME =
+OBF_PLUGIN_PATH = "llvm-yx-callobfuscator/CallObfuscatorPlugin.dll"
+OBF_PASS_NAME = callobfuscator-pass
 
-LLVM_OBF_HELPERS =
+LLVM_OBF_HELPERS = 
 export LLVM_OBF_FUNCTIONS="callobfuscator.conf"
 
 OPT = opt
@@ -53,15 +53,11 @@ endif
 all: create_directories $(OUT_NAME)
 
 .FORCE:
-link:  $(OBJ_OUT_NAME) .FORCE
-	$(LDX64) $(OBJ_OUT_NAME)  -o $(OUT_NAME) $(LFLAGS) -L$(LLVM_OBF_HELPERS) -lcallobfuscatorhelpers
-
-.FORCE:
 run_opt: $(IR_OUT_NAME) .FORCE
 	$(OPT) $(OPT_FLAGS) $(IR_OUT_NAME) -o opt_check.ll
 
 $(OUT_NAME): $(OBJ_OUT_NAME)
-	$(LDX64) $^  -o $@ $(LFLAGS) -L$(LLVM_OBF_HELPERS) -lcallobfuscatorhelpers
+	$(LDX64) $^  -o $@ $(LFLAGS) -lCallObfuscatorHelpers
 
 $(OBJ_OUT_NAME): $(IR_OUT_NAME)
 	llc -filetype=obj --mtriple=x86_64-pc-windows-msvc $(IR_OUT_NAME) -o $(OBJ_OUT_NAME)
