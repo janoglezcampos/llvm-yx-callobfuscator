@@ -69,8 +69,6 @@ typedef struct _FUNCTION_TABLE
 // ==============================================================================
 // =============================== GLOBALS ======================================
 
-unsigned long __callobf_lastError = 0;
-
 // ==============================================================================
 // =========================== EXTERNAL GLOBALS =================================
 
@@ -124,14 +122,6 @@ void *__callobf_callDispatcher(DWORD32 index, ...);
 
 // ==============================================================================
 // =========================== PRIVATE  FUNCTIONS ===============================
-
-// TODO: Put this to work
-/**
- * @brief Work in progress.
- *
- * @return unsigned
- */
-unsigned long __callobf_getLastError();
 
 /**
  * @brief Given a function entry, loads all it non initialized fields.

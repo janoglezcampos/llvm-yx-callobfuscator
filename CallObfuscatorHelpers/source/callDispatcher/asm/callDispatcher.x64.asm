@@ -100,6 +100,7 @@ __callobf_doCall:
     jmp r11
 
 error:
+    fastcall_win64 __callobf_setLastError, 1
     xor rax, rax
 restore:
     mov rsp, rbp

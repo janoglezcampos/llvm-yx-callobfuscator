@@ -25,6 +25,11 @@
 #include "common/commonUtils.h"
 #include "common/debug.h"
 
+// ==============================================================================
+// ================================= GLOBALS ====================================
+
+unsigned long __callobf_lastError = 0;
+
 BOOL __callobf_srand(PDWORD p_ctx, DWORD seed)
 {
     if (!p_ctx)
@@ -159,4 +164,14 @@ DWORD32 __callobf_lfsrXorShift32(DWORD32 prevVal)
     prevVal ^= prevVal << 17;
     prevVal ^= prevVal >> 5;
     return prevVal;
+}
+
+DWORD32 __callobf_getLastError()
+{
+    return __callobf_lastError;
+}
+
+VOID __callobf_setLastError(DWORD32 error)
+{
+    __callobf_lastError = error;
 }

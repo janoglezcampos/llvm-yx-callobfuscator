@@ -88,12 +88,12 @@ All the commands run in the following steps are supossed to be used in an MSYS2 
     To do this, add the following line to ```~/.bash_profile``` if exists, if not, add it to ```~/.profile```. Also, modify the library path, so you wont need to specify the path to helpers everytime you link.
 
         export PATH=$PATH:"<path_to_install_folder>"
-        export LIBRARY_PATH=$ LIBRARY_PATH:"<path_to_install_folder>/plugin-helpers"
+        export LIBRARY_PATH=$ LIBRARY_PATH:"<path_to_install_folder>/llvm-yx-callobfuscator/plugin-helpers"
 
     Remember the path format changes from Windows, where C: becomes /c/ (because PATH separator is ```:```), for example, in my case would:
 
         export PATH=$PATH:"/c/Users/<user>/llvm-plugins"
-        export LIBRARY_PATH=$LIBRARY_PATH:"/c/Users/<user>/llvm-plugins/plugin-helpers"
+        export LIBRARY_PATH=$LIBRARY_PATH:"/c/Users/<user>/llvm-plugins/callobfuscator/plugin-helpers"
      
 
 ## Usage and example
@@ -141,7 +141,7 @@ Now is time to run the pass. Remember that there is a makefile already set up in
 
 * Link:
 
-        clang ./build/objs/example.obj -o ./build/example.exe -L"<path_to_install_folder>/plugin-helpers" -lCallObfuscatorHelpers 
+        clang ./build/objs/example.obj -o ./build/example.exe -L"<path_to_install_folder>/callobfuscator/plugin-helpers" -lCallObfuscatorHelpers 
 
     If added helpers path to LIBRARY_PATH then you can ommit the ```-L``` option.
 
@@ -223,7 +223,6 @@ To Arash Parsa, aka [waldoirc](https://twitter.com/waldoirc), Athanasios Tserpel
 >### General quality:
 >* Group all globals, or somehow make it clear in the code where all globals are declared.
 >* Put MIN_ADD_RSP_FRAME_SIZE to work.
->* Better error propagation and implement callObfGetLastError()
 >* Optionally validate config file entries against local dlls.
 >* Optionally return load errors through messagebox pop ups, similarly to what ms does with CRTs.
 >

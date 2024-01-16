@@ -28,12 +28,6 @@
 #include "syscalls/syscalls.h"
 #include "common/debug.h"
 
-// Not fully implemented, meant to return errors
-unsigned long __callobf_getLastError()
-{
-    return __callobf_lastError;
-}
-
 HMODULE __callobf_loadLibrary(PCHAR p_dllName)
 {
     DWORD loadLibraryIndex = -1;
@@ -117,6 +111,8 @@ void *__callobf_callDispatcher(DWORD32 index, ...)
     DWORD32 argCount = 0;
     PFUNCTION_TABLE_ENTRY p_fEntry = NULL;
 
+    __callobf_setLastError(0);
+
 #ifdef __clang__
     __builtin_ms_va_list p_args;
 #else
@@ -127,6 +123,7 @@ void *__callobf_callDispatcher(DWORD32 index, ...)
 
     if (index > __callobf_functionTable.count)
     {
+        __callobf_setLastError(1);
         return NULL;
     }
 
@@ -136,6 +133,7 @@ void *__callobf_callDispatcher(DWORD32 index, ...)
     {
         if (!(p_function = __callobf_loadFunction(p_fEntry)))
         {
+            __callobf_setLastError(1);
             return NULL;
         }
     }

@@ -31,6 +31,7 @@
 ; Exported functions
 GLOBAL __callobf_doCall
 
+EXTERN __callobf_setLastError
 EXTERN __callobf_buildSpoofedCallStack
 
 ; ============ Define struct types ==============

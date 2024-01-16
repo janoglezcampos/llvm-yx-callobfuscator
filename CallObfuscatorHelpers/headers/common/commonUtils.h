@@ -121,4 +121,9 @@ PVOID __callobf_getStackBase();
  */
 PVOID __callobf_getStackLimit();
 
+// Not fully implemented, meant to return errors
+DWORD32 __callobf_getLastError();
+
+VOID __callobf_setLastError(DWORD32 error);
+
 #endif
