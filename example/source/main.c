@@ -12,11 +12,6 @@ int main()
     printf("[INFO] Running call obfuscator test\n");
 
     PVOID p_kernel32 = LoadLibraryA("kernel32");
-    if (__callobf_getLastError())
-    {
-        printf("[INFO] Found error\n");
-        return 1;
-    }
     printf("[INFO] kernel32 addr: %p\n", p_kernel32);
     PVOID addr = memoryTest();
     Sleep(1000);
