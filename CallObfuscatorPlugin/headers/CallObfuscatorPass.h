@@ -10,6 +10,13 @@
 #define DLL_NAME_KEY "dll_name"
 #define FUNCTION_HOOKS_KEY "hooked_functions"
 
+#define DO_PRAGMA(x) _Pragma(#x)
+#define NOWARN(warnoption, ...)                  \
+    DO_PRAGMA(GCC diagnostic push)               \
+    DO_PRAGMA(GCC diagnostic ignored warnoption) \
+    __VA_ARGS__                                  \
+    DO_PRAGMA(GCC diagnostic pop)
+
 using namespace llvm;
 using namespace json;
 
