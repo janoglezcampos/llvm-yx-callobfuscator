@@ -185,23 +185,23 @@ To Arash Parsa, aka [waldoirc](https://twitter.com/waldoirc), Athanasios Tserpel
 > ## TODO:
 > This includes things that I really dont want to forget, but more stuff could be added here. Not by now
 >### Docs/formatting:
->* Document functions
->* Check that the setup instruction works.
->* Somehow improve stackSpoofHelper.x64.asm readability (not today, it works)
+>* Check that the setup instructions works. PRERELEASE
+>* Somehow improve stackSpoofHelper.x64.asm readability.
 >  
 >### Opsec:
 >* EAF bypass.
->* Seach modules by its hash.
+>* Seach modules by its hash. PRERELEASE
 >* Encript strings that cant be hashed.
 >
 >### General quality:
 >* Group all globals, or somehow make it clear in the code where all globals are declared.
 >* Put MIN_ADD_RSP_FRAME_SIZE to work.
->* Better error propagation and implement callObfGetLastError()
->* Optionally validate config file entries against local dlls
->* Optionally return load errors through messagebox pop ups, similarly to how ms does with CRTs
+>* Better error propagation and implement callObfGetLastError() PRERELEASE
+>* Optionally validate config file entries against local dlls.
+>* Optionally return load errors through messagebox pop ups, similarly to what ms does with CRTs.
+>* Check that new loadlibrary works. PRERELEASE
 >
 >### Functionality:
 >* Handle invoke instructions and exception stuff (should not happen in C but...)
 >* Handle indirect calls
->* Handle function address reads
+>* Handle function address reads (In fact indirect calls always start with a value read, so they are the same case)
