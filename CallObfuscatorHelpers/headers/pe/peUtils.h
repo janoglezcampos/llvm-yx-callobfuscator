@@ -44,7 +44,8 @@ extern PTEB NtCurrentTeb(void);
 PVOID __callobf_getModuleAddrA(const PCHAR p_moduleName);
 
 /**
- * @brief Finds pointer to a module loaded in memory from its name in wide char form.
+ * @brief Finds pointer to a module loaded in memory from its name in wide char
+ *        form.
  *
  * @param p_moduleName Module name.
  * @return PVOID Pointer to module base if found, else NULL.
@@ -72,8 +73,8 @@ PVOID __callobf_getFunctionAddrA(
     const PCHAR p_functionName);
 
 /**
- * @brief Given a module pointer, find the given function name in wide char form between its
- *        exported functions, then  returns its pointer.
+ * @brief Given a module pointer, find the given function name in wide char form
+ *        between its exported functions, then  returns its pointer.
  *
  * @param p_module Pointer to module to search in.
  * @param p_functionName Function name.
@@ -84,8 +85,8 @@ PVOID __callobf_getFunctionAddrW(
     const PWCHAR p_functionName);
 
 /**
- * @brief Given a module pointer, find the given function hash between its exported functions,
- *        then  returns its pointer.
+ * @brief Given a module pointer, find the given function hash between its exported
+ *        functions, then  returns its pointer.
  *
  * @param p_module Pointer to module to search in.
  * @param funtionHash Function hash.
