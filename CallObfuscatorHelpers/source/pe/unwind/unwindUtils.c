@@ -26,98 +26,41 @@
 #include "common/commonUtils.h"
 #include "pe/peUtils.h"
 
-DWORD __callobf_getNodesUsed(PUNWIND_CODE p_unwindCode)
+BOOL __callobf_createOrResetUnwindInfoIterator(
+    _Out_ PUNWIND_INFO_ITERATOR_CONTEXT p_ctx,
+    _In_ HMODULE p_moduleBase)
 {
-    DWORD nodeCount = 0;
-    switch (p_unwindCode->UnwindOp)
-    {
-    case UWOP_PUSH_NONVOL:     // 0
-    case UWOP_ALLOC_SMALL:     // 2
-    case UWOP_SET_FPREG:       // 3
-    case UWOP_PUSH_MACH_FRAME: // 10
-        break;
+    DWORD runtimeFunctionTableSize = 0;
 
-    case UWOP_SAVE_NONVOL: // 4
-    case UWOP_EPILOG:      // 6
-    case UWOP_SAVE_XMM128: // 8
-        nodeCount++;
-        break;
+    if (!p_ctx || !p_moduleBase)
+        return FALSE;
 
-    case UWOP_ALLOC_LARGE: // 1
-        nodeCount++;
-        if (p_unwindCode->OpInfo != 0)
-            nodeCount++;
-        break;
+    p_ctx->p_moduleBase = p_moduleBase;
+    p_ctx->nextIndex = 0;
+    p_ctx->ended = FALSE;
 
-    case UWOP_SAVE_NONVOL_BIG: // 5
-    case UWOP_SPARE_CODE:      // 7
-    case UWOP_SAVE_XMM128BIG:  // 9
-        nodeCount += 2;
-        break;
-    }
-    return (nodeCount + 1);
+    p_ctx->p_runtimeFunctionTable = (PIMAGE_RUNTIME_FUNCTION_ENTRY)(__callobf_getExceptionDirectoryAddress(p_moduleBase, &runtimeFunctionTableSize));
+    p_ctx->entryCount = (DWORD)(runtimeFunctionTableSize / sizeof(IMAGE_RUNTIME_FUNCTION_ENTRY));
+    return TRUE;
 }
 
-LONG __callobf_getStackSizeModification(PUNWIND_CODE p_unwindCode)
+PUNWIND_INFO __callobf_getNextUnwindInfo(
+    PUNWIND_INFO_ITERATOR_CONTEXT p_ctx)
 {
-    LONG stackSizeMod = 0;
-    switch (p_unwindCode->UnwindOp)
+    if (!p_ctx)
+        return NULL;
+
+    PIMAGE_RUNTIME_FUNCTION_ENTRY p_runtimeFunctionTable = p_ctx->p_runtimeFunctionTable;
+    DWORD currentIndex = p_ctx->nextIndex;
+
+    if (currentIndex >= p_ctx->entryCount)
     {
-    case UWOP_PUSH_NONVOL: // 0
-        stackSizeMod = 8;
-        break;
-    case UWOP_ALLOC_SMALL: // 2
-        stackSizeMod = 8 * (p_unwindCode->OpInfo + 1);
-        break;
-    case UWOP_SET_FPREG: // 3
-        break;
-    case UWOP_PUSH_MACH_FRAME: // 10
-        if (p_unwindCode->OpInfo == 0)
-        {
-            stackSizeMod = 0x40;
-            break;
-        }
-        stackSizeMod = 0x48;
-        break;
-
-    case UWOP_SAVE_NONVOL: // 4
-    case UWOP_EPILOG:      // 6
-    case UWOP_SAVE_XMM128: // 8
-        break;
-
-    case UWOP_ALLOC_LARGE: // 1
-        stackSizeMod = p_unwindCode[1].FrameOffset;
-
-        if (p_unwindCode->OpInfo == 0)
-        {
-            stackSizeMod *= 8;
-        }
-        else
-        {
-            stackSizeMod += p_unwindCode[2].FrameOffset << 16;
-        }
-        break;
-
-    case UWOP_SAVE_NONVOL_BIG: // 5
-    case UWOP_SPARE_CODE:      // 7
-    case UWOP_SAVE_XMM128BIG:  // 9
-        break;
+        p_ctx->ended = TRUE;
+        return NULL;
     }
-    return stackSizeMod;
-}
 
-LONG __callobf_getFrameSizeModification(PUNWIND_INFO p_unwindInfo, PUNWIND_CODE p_unwindCode)
-{
-    LONG frameSizeMod = 0;
-    switch (p_unwindCode->UnwindOp)
-    {
-    case UWOP_SET_FPREG: // 3
-        frameSizeMod = -0x10 * (p_unwindInfo->FrameOffset);
-        break;
-    default:
-        frameSizeMod = __callobf_getStackSizeModification(p_unwindCode);
-    }
-    return frameSizeMod;
+    p_ctx->nextIndex++;
+    return (PUNWIND_INFO)((UINT64)p_ctx->p_moduleBase + (DWORD)p_runtimeFunctionTable[currentIndex].UnwindData);
 }
 
 BOOL __callobf_createOrResetUwopIterator(
@@ -125,7 +68,7 @@ BOOL __callobf_createOrResetUwopIterator(
     _In_ HMODULE p_moduleBase,
     _In_ PUNWIND_INFO p_unwindInfoAddress)
 {
-    if (!p_ctx)
+    if (!p_ctx || !p_moduleBase || !p_unwindInfoAddress)
         return FALSE;
 
     p_ctx->p_moduleBase = p_moduleBase;
@@ -174,7 +117,112 @@ PUNWIND_CODE __callobf_getNextUwop(
     return p_nextUnwindCode;
 }
 
-PUNWIND_INFO __callobf_getUnwindInfoForCodePtr(PVOID p_module, PVOID p_code, PVOID *p_functionStart, PVOID *p_functionEnd)
+DWORD __callobf_getNodesUsed(PUNWIND_CODE p_unwindCode)
+{
+    DWORD nodeCount = 0;
+
+    if (!p_unwindCode)
+        return 0;
+
+    switch (p_unwindCode->UnwindOp)
+    {
+    case UWOP_PUSH_NONVOL:     // 0
+    case UWOP_ALLOC_SMALL:     // 2
+    case UWOP_SET_FPREG:       // 3
+    case UWOP_PUSH_MACH_FRAME: // 10
+        break;
+
+    case UWOP_SAVE_NONVOL: // 4
+    case UWOP_EPILOG:      // 6
+    case UWOP_SAVE_XMM128: // 8
+        nodeCount++;
+        break;
+
+    case UWOP_ALLOC_LARGE: // 1
+        nodeCount++;
+        if (p_unwindCode->OpInfo != 0)
+            nodeCount++;
+        break;
+
+    case UWOP_SAVE_NONVOL_BIG: // 5
+    case UWOP_SPARE_CODE:      // 7
+    case UWOP_SAVE_XMM128BIG:  // 9
+        nodeCount += 2;
+        break;
+    }
+    return (nodeCount + 1);
+}
+
+LONG __callobf_getStackSizeModification(PUNWIND_CODE p_unwindCode)
+{
+    LONG stackSizeMod = 0;
+
+    if (!p_unwindCode)
+        return 0;
+
+    switch (p_unwindCode->UnwindOp)
+    {
+    case UWOP_PUSH_NONVOL: // 0
+        stackSizeMod = 8;
+        break;
+    case UWOP_ALLOC_SMALL: // 2
+        stackSizeMod = 8 * (p_unwindCode->OpInfo + 1);
+        break;
+    case UWOP_SET_FPREG: // 3
+        break;
+    case UWOP_PUSH_MACH_FRAME: // 10
+        if (p_unwindCode->OpInfo == 0)
+        {
+            stackSizeMod = 0x40;
+            break;
+        }
+        stackSizeMod = 0x48;
+        break;
+
+    case UWOP_SAVE_NONVOL: // 4
+    case UWOP_EPILOG:      // 6
+    case UWOP_SAVE_XMM128: // 8
+        break;
+
+    case UWOP_ALLOC_LARGE: // 1
+        stackSizeMod = p_unwindCode[1].FrameOffset;
+
+        if (p_unwindCode->OpInfo == 0)
+        {
+            stackSizeMod *= 8;
+        }
+        else
+        {
+            stackSizeMod += p_unwindCode[2].FrameOffset << 16;
+        }
+        break;
+
+    case UWOP_SAVE_NONVOL_BIG: // 5
+    case UWOP_SPARE_CODE:      // 7
+    case UWOP_SAVE_XMM128BIG:  // 9
+        break;
+    }
+    return stackSizeMod;
+}
+
+LONG __callobf_getFrameSizeModification(PUNWIND_INFO p_unwindInfo, PUNWIND_CODE p_unwindCode)
+{
+    LONG frameSizeMod = 0;
+    if (!p_unwindInfo || !p_unwindCode)
+        return 0;
+
+    switch (p_unwindCode->UnwindOp)
+    {
+    case UWOP_SET_FPREG: // 3
+        frameSizeMod = -0x10 * (p_unwindInfo->FrameOffset);
+        break;
+    default:
+        frameSizeMod = __callobf_getStackSizeModification(p_unwindCode);
+    }
+    return frameSizeMod;
+}
+
+PUNWIND_INFO __callobf_getUnwindInfoForCodePtr(PVOID p_module, PVOID p_code, PVOID *pp_functionStart, PVOID *pp_functionEnd)
 {
     DWORD_PTR startAddress = 0;
     DWORD_PTR endAddress = 0;
@@ -200,11 +248,11 @@ PUNWIND_INFO __callobf_getUnwindInfoForCodePtr(PVOID p_module, PVOID p_code, PVO
 
         if ((DWORD_PTR)p_code >= startAddress && (DWORD_PTR)p_code < endAddress)
         {
-            if (p_functionStart)
-                *p_functionStart = (PVOID)startAddress;
+            if (pp_functionStart)
+                *pp_functionStart = (PVOID)startAddress;
 
-            if (p_functionEnd)
-                *p_functionEnd = (PVOID)endAddress;
+            if (pp_functionEnd)
+                *pp_functionEnd = (PVOID)endAddress;
 
             return (PUNWIND_INFO)((UINT64)p_module + (DWORD)p_runtimeFunctionTable[i].UnwindData);
         }
@@ -289,46 +337,19 @@ PVOID __callobf_findEntryAddressOfReturnAddress(PVOID p_ntdll, PVOID p_kernel32)
     return NULL;
 }
 
-BOOL __callobf_createOrResetUnwindInfoIterator(
-    _Out_ PUNWIND_INFO_ITERATOR_CONTEXT p_ctx,
-    _In_ HMODULE p_moduleBase)
-{
-    DWORD runtimeFunctionTableSize = 0;
-
-    if (!p_ctx)
-        return FALSE;
-
-    p_ctx->p_moduleBase = p_moduleBase;
-    p_ctx->nextIndex = 0;
-    p_ctx->ended = FALSE;
-
-    p_ctx->p_runtimeFunctionTable = (PIMAGE_RUNTIME_FUNCTION_ENTRY)(__callobf_getExceptionDirectoryAddress(p_moduleBase, &runtimeFunctionTableSize));
-    p_ctx->entryCount = (DWORD)(runtimeFunctionTableSize / sizeof(IMAGE_RUNTIME_FUNCTION_ENTRY));
-    return TRUE;
-}
-
-PUNWIND_INFO __callobf_getNextUnwindInfo(
-    PUNWIND_INFO_ITERATOR_CONTEXT p_ctx)
-{
-    PIMAGE_RUNTIME_FUNCTION_ENTRY p_runtimeFunctionTable = p_ctx->p_runtimeFunctionTable;
-    DWORD currentIndex = p_ctx->nextIndex;
-
-    if (currentIndex >= p_ctx->entryCount)
-    {
-        p_ctx->ended = TRUE;
-        return NULL;
-    }
-
-    p_ctx->nextIndex++;
-    return (PUNWIND_INFO)((UINT64)p_ctx->p_moduleBase + (DWORD)p_runtimeFunctionTable[currentIndex].UnwindData);
-}
-
 BOOL __callobf_getCodeBoundariesLastUnwindInfo(
     PUNWIND_INFO_ITERATOR_CONTEXT p_ctx,
     PVOID *pp_beginAddress,
     PVOID *pp_endAddress)
 {
     PIMAGE_RUNTIME_FUNCTION_ENTRY p_runtimeFunctionTable = p_ctx->p_runtimeFunctionTable;
+
+    if (!p_ctx || !pp_beginAddress || !pp_endAddress)
+        return FALSE;
+
+    if (p_ctx->nextIndex <= 0)
+        return FALSE;
+
     DWORD currentIndex = p_ctx->nextIndex - 1;
 
     if (currentIndex >= p_ctx->entryCount)
@@ -343,14 +364,17 @@ BOOL __callobf_getCodeBoundariesLastUnwindInfo(
     return TRUE;
 }
 
-DWORD64 __callobf_getOffsetWhereRegSaved(PVOID p_module, PUNWIND_INFO p_unwindInfo, REGISTERS reg)
+LONG64 __callobf_getOffsetWhereRegSaved(PVOID p_module, PUNWIND_INFO p_unwindInfo, REGISTERS reg)
 {
     UWOP_ITERATOR_CONTEXT uwopCtx = {0};
     PUNWIND_CODE p_uwop = NULL;
     LONG stackSize = 0;
 
+    if (!p_module || !p_unwindInfo)
+        return -1;
+
     if (!__callobf_createOrResetUwopIterator(&uwopCtx, p_module, p_unwindInfo))
-        return FALSE;
+        return -1;
 
     while ((p_uwop = __callobf_getNextUwop(&uwopCtx)))
     {
@@ -371,5 +395,5 @@ DWORD64 __callobf_getOffsetWhereRegSaved(PVOID p_module, PUNWIND_INFO p_unwindIn
         }
         stackSize += __callobf_getStackSizeModification(p_uwop);
     }
-    return 0;
+    return -1;
 }
