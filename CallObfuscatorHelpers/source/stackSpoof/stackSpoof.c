@@ -30,6 +30,7 @@
 #include "pe/peUtils.h"
 #include "pe/unwind/unwindUtils.h"
 
+// TODO: Check if this can me moved to a header file
 STACK_SPOOF_INFO __callobf_globalFrameTable = {
     .entryCountPerList = MAX_ENTRIES_PER_LIST,
     .nextCiclicValue = 0x89235482,
