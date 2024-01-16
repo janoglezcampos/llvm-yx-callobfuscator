@@ -264,13 +264,18 @@ DWORD64 __callobf_fillSaveRbpFrameTable(
         {
             PVOID p_begin = NULL;
             PVOID p_end = NULL;
+            LONG64 saveOffset = -1;
 
             if (!__callobf_getCodeBoundariesLastUnwindInfo(&unwindInfoCtx, &p_begin, &p_end))
                 return entryCount;
 
+            if (!(saveOffset = __callobf_getOffsetWhereRegSaved(p_module, p_unwindInfo, RBP)))
+                return entryCount;
+
             p_entryList[entryCount].p_entryAddr = MID_POINT_ADDR(p_begin, p_end); // random ptr inside function
             p_entryList[entryCount].frameSize = frameSize;
-            p_entryList[entryCount].rbpOffset = __callobf_getOffsetWhereRegSaved(p_module, p_unwindInfo, RBP);
+            p_entryList[entryCount].rbpOffset = saveOffset;
+
             entryCount++;
         }
     }
