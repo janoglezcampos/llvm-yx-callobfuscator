@@ -27,8 +27,11 @@
 BOOL __callobf_srand(PDWORD p_ctx, DWORD seed)
 {
     if (!p_ctx)
-        return;
+        return FALSE;
+
     *p_ctx = seed;
+
+    return TRUE;
 }
 
 DWORD __callobf_rand(PDWORD p_ctx) // RAND_MAX assumed as 256 + 20
