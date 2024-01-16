@@ -26,7 +26,7 @@
  *  generating code. This can be used at any point in a source file
  *  where typedef is legal.
  *
- *  \param predicate The predicate to test. It must evaluate to
+ *  @param predicate The predicate to test. It must evaluate to
  *  something that can be coerced to a normal C boolean.
  */
 #define CASSERT(predicate) _impl_CASSERT_LINE(predicate, __LINE__, __FILE__)
@@ -43,7 +43,6 @@
     __VA_ARGS__                                  \
     DO_PRAGMA(GCC diagnostic pop)
 
-// Stolen from SilentMoonwalk project
 #define BitVal(data, y) ((data >> y) & 1)
 
 #define BitChainInfo(data) BitVal(data, 2)

@@ -42,7 +42,13 @@ VOID __callobf_srand(PDWORD next, DWORD seed)
 {
     *next = seed;
 }
-
+/**
+ * @brief Simple hash function to produce 32 bit values from NULL terminated strings.
+ *        Any other 32 bit hash like djb2 would work.
+ *
+ * @param p_str Pointer to NULL terminated string.
+ * @return UINT32 32 bit value representing the string.
+ */
 UINT32 __callobf_hashA(const PCHAR p_str)
 {
     UINT h;
