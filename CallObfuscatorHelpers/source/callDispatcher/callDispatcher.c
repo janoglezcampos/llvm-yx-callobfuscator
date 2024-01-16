@@ -50,7 +50,7 @@ HMODULE __callobf_loadLibrary(PCHAR p_dllName)
         if (__callobf_functionTable.entries[i].hash == __callobf_hashA("LoadLibraryA"))
             loadLibraryIndex = i;
 
-    if (loadLibraryIndex == -1)
+    if (loadLibraryIndex == (DWORD)-1)
         return NULL;
 
     return __callobf_callDispatcher(loadLibraryIndex, p_dllName);
@@ -62,6 +62,7 @@ void *__callobf_loadFunction(PFUNCTION_TABLE_ENTRY p_fEntry)
     DWORD32 moduleHash = 0;
     USHORT ssn = 0;
     PVOID p_function = NULL;
+    BOOL isSyscall = FALSE;
 
     p_dllEntry = &__callobf_dllTable.entries[p_fEntry->moduleIndex];
     moduleHash = __callobf_hashA(p_dllEntry->name);
@@ -82,24 +83,26 @@ void *__callobf_loadFunction(PFUNCTION_TABLE_ENTRY p_fEntry)
         return NULL;
     }
 
+    p_fEntry->ssn = 0;
     if (moduleHash == __callobf_hashA("ntdll.dll"))
     {
         if (__callobf_loadSyscall(p_fEntry->hash, p_dllEntry->handle, &ssn, &p_function))
         {
+            isSyscall = TRUE;
+
             p_fEntry->ssn = (((DWORD32)ssn) | 0xFFFF0000);
             p_fEntry->functionPtr = p_function;
 
             DEBUG_PRINT("Loaded function 0x%08lX as syscall with ssn 0x%04X at %p", p_fEntry->hash, ssn, p_function);
-            return p_fEntry->functionPtr;
         }
     };
 
-    p_fEntry->ssn = 0;
-    p_fEntry->functionPtr = __callobf_getFunctionAddrH(p_dllEntry->handle, p_fEntry->hash);
+    if (!isSyscall)
+        p_fEntry->functionPtr = __callobf_getFunctionAddrH(p_dllEntry->handle, p_fEntry->hash);
 
     if (!p_fEntry->functionPtr)
     {
-        DEBUG_PRINT("Error, load function");
+        DEBUG_PRINT("Error loading function");
         return NULL;
     }
 

@@ -100,13 +100,9 @@ __callobf_doCall:
     mov rsp, [pp_newRsp]
     jmp r11
 
-restore:
-    mov rsp, rbp
-    end_function
-
 error:
     xor rax, rax
-
+restore:
     mov rsp, rbp
     end_function
 
