@@ -3,10 +3,12 @@
 
 #include "common/common.h"
 
-#define DEBUG
-#define DISABLE_OPTIMIZATIONS __attribute__((optnone))
-
 #ifdef DEBUG
+
+#ifndef printf
+extern int printf(const char *format, ...);
+#endif
+
 #define DEBUG_PRINT(fmt, ...)                                                                                \
     do                                                                                                       \
     {                                                                                                        \

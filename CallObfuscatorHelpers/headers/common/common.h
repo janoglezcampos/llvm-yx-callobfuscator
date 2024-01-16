@@ -4,6 +4,8 @@
 #define WIN32_LEAN_AND_MEAN
 #include <Windows.h>
 
+#define DEBUG
+
 // ==========================================================
 // ================= MACRO DEFINITIONS ======================
 
@@ -50,10 +52,10 @@
 #define BitEHandler(data) BitVal((data), 0)
 #define Version(data) BitVal(data, 4) * 2 + BitVal(data, 3)
 
+#define DISABLE_OPTIMIZATIONS __attribute__((optnone))
+
 // ==========================================================
 // ================ EXTERNAL FUNCTIONS ======================
-
-extern int printf(const char *format, ...);
 
 // ==========================================================
 
