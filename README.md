@@ -1,11 +1,11 @@
 # LLVM-YX-CALLOBFUSCATOR
 
 
-LLVM plugin to transparently apply stack spoofing and indirect syscalls, if possible, to Windows x64 native calls at compile time.
+LLVM plugin to transparently apply stack spoofing and indirect syscalls to Windows x64 native calls at compile time.
 
 
 ## "I've 5 mins, what is this?"
-This project is a plugin meant to be used with [opt](https://llvm.org/docs/CommandGuide/opt.html), the LLVM optimizer. Opt will use the pass included in this plugin to hook calls to Windows functions based on a config file and point those calls to a single function, which, given an ID identifying the function to be called, will apply dynamic stack obfuscation, and if the function is a syscall stub, will call it throw indirect syscalling.
+This project is a plugin meant to be used with [opt](https://llvm.org/docs/CommandGuide/opt.html), the LLVM optimizer. Opt will use the pass included in this plugin to hook calls to Windows functions based on a config file and point those calls to a single function, which, given an ID identifying the function to be called, will apply dynamic stack obfuscation, and if the function is a syscall stub, will invoke it using "indirect syscalling".
 
 
 **Brief**: Set up a config file indicating the functions to be hooked, write your code without caring about Windows function calls, compile with clang to generate .ir files, give them to opt along with this plugin, opt hooks functions, llc compiles the .ir to a.obj, and ld links it to an executable that automatically obfuscates function calls.
@@ -35,21 +35,25 @@ This setup is written for Windows, but it should be possible to setup this envir
     LLVM can be either compiled from source, downloaded from the LLVM releases, or installed through MSYS2. For a guide on how to compile LLVM from source and compile a basic plugin, [see this](https://github.com/janoglezcampos/llvm-pass-plugin-skeleton?tab=readme-ov-file#llvm-optimization-pass-skeleton). We also need to set up CMAKE and our build tools. Clang is required to compile the helpers library. For the linker, we don't care too much. Lastly, as a generator, I prefer Ninja, but make, nmake or msbuild will work.
 
     Everything listed above can be installed with pacman by using MSYS2.
-  * Download and install [MSYS2](https://www.msys2.org/).
-  * Launch an MSYS2 Mingw64 terminal and install the following packages:
-  * Install LLVM: ```pacman -S mingw-w64-x86_64-llvm```
-  * Install Clang: ```pacman -S mingw-w64-x86_64-clang```
-  * Install Cmake: ```pacman -S mingw-w64-x86_64-cmake```
-  * Install Ninja: ```pacman -S mingw-w64-x86_64-ninja```
 
+    * Download and install [MSYS2](https://www.msys2.org/).
+    * Launch an MSYS2 Mingw64 terminal and install the following packages:
+    * Install LLVM: ```pacman -S mingw-w64-x86_64-llvm```
+    * Install Clang: ```pacman -S mingw-w64-x86_64-clang```
+    * Install Nasm: ```pacman -S mingw-w64-x86_64-nasm```
+    * Install Cmake: ```pacman -S mingw-w64-x86_64-cmake```
+    * Install Ninja: ```pacman -S mingw-w64-x86_64-ninja```
+    * Install Git: ```pacman -S git```
+
+    Restart the terminal, It may help with env variables, and gives luck for the followinf building ritual.
 * **Building**:
   
-  First, clone this project, pretty obvious:
+    First, clone this project, pretty obvious:
 
         git clone https://github.com/janoglezcampos/llvm-yx-callobfuscator
 
 
-    To build this project, we will be using CMAKE. Because I find it convenient, I use VScode with the CMake extension. You will find my CMAKE config at ```.vscode_conf/setting.json```
+    To build this project, we will be using CMAKE. Because I find it convenient, I use VScode with the CMake extension. You can find my VSCODE config at ```.vscode_conf/setting.json```
 
     In any other case, launch an MSYS2 Mingw64 terminal and do exactly what I say (without checking what any of the commands Im giving you will do to your beloved machine):
 
@@ -80,8 +84,10 @@ This setup is written for Windows, but it should be possible to setup this envir
     * ```libCallObfuscatorHelpers.a```: A C library that includes all the logic that needs to be executed at runtime.  
     * ```CallObfuscatorPlugin.dll```:  The actual plugin, written in C++, that will be compiled and linked to a dll.
 
-## Usage and example
+    Once all this is done I like to add the path I used to install the plugin to the user path, so it is easier to import it after.
 
+## Usage and example
+All the commands run here are supossed to be used in an MSYS2 terminal ie they have Linux format.
 
 First of all, we need to set up our configuration file. In this section, we will be building the project found in the example folder, so the config file is already made. You can add any number of functions to the file, and the functions do not need to appear in the program.
 
@@ -91,29 +97,40 @@ Now is time to run the pass. Remember that there is a makefile already set up in
 
 * Go inside the example folder and create a build folder; inside, create 2 folders: irs and objs.
 
-        cd example; mkdir build; mkdir build/irs; mkdifr build/objs
+        cd example; mkdir build; mkdir build/irs; mkdir build/objs
+
 * Set ```LLVM_OBF_FUNCTIONS``` to point to the full path of ```callobfuscator.conf```, only for this terminal:
 
-    * MSYS2/Linux: ```export LLVM_OBF_FUNCTIONS=<absolute path to callobfuscator.conf>```
-    * Windows PowerShell: ```env:LLVM_OBF_FUNCTIONS=<absolute path to callobfuscator.conf>```
-  
+        export LLVM_OBF_FUNCTIONS=<absolute path to callobfuscator.conf>
+
+### NOTE: Any path in MYSYS2 must be written using / and not \
+
 * Compile the C files to LLVM-IR:
 
         clang -O0 -Xclang -disable-O0-optnone -S -emit-llvm ./source/utils.c -Iheaders -o ./build/irs/utils.ll
 
         clang -O0 -Xclang -disable-O0-optnone -S -emit-llvm ./source/main.c -Iheaders -o ./build/irs/main.ll
+
 * Merge all files:
 
         llvm-link ./build/irs/main.ll ./build/irs/utils.ll -S -o ./build/irs/example.ll
+
 * Run obfusction pass:
 
-        opt -load-pass-plugin="<path to the pass dll>" -passes="base-plugin-pass" ./build/irs/example.ll -o ./build/irs/example.obf.ll
+        opt -load-pass-plugin="<path to the pass dll>" -passes="callobfuscator-pass" ./build/irs/example.ll -o ./build/irs/example.obf.ll
+    
+    If added install path to user or system path, then:
+
+        opt -load-pass-plugin="llvm-yx-callobfuscator/CallObfuscatorPlugin.dll" -passes="callobfuscator-pass" ./build/irs/example.ll -o ./build/irs/example.obf.ll
+
 * Run optimization passes:
 
         opt -O3 ./build/irs/example.obf.ll -o ./build/irs/example.op.ll
+
 * Compile to windows x86_64 assembly:
   
         llc --mtriple=x86_64-pc-windows-msvc -filetype=obj  ./build/irs/example.op.ll -o ./build/objs/example.obj
+
 * Link:
 
         clang ./build/objs/example.obj -o ./build/example.exe
@@ -165,18 +182,19 @@ Now you should have ```./build/example.exe```, the final executable.
     The dispatching system starts by initializing the frame table (```__callobf_globalFrameTable```), used to cache posible frames and gadgets that will be used to build the obfuscated stack. The obfuscation method is the same as explained [here](https://klezvirus.github.io/RedTeaming/AV_Evasion/StackSpoofing/), still an outstanding job.
 
     When ```__callobf_globalFrameTable``` gets invoked, the following happens:
-  * Loads the function if needed:
-    * Gets the dll from the dll table and loads it if needed.
-    * Find the function in the IAT and store the address in the function table.
-    * Find if the call is a syscall; if it is, get the ssn and store it in the function table.
+    
+    * Loads the function if needed:
+        * Gets the dll from the dll table and loads it if needed.
+        * Find the function in the IAT and store the address in the function    table.
+        * Find if the call is a syscall; if it is, get the ssn and store it in the function table.
 
-  * Build a fake stack using the values stored in the frame table     and store it over the current stack pointer.
-  * Update the ciclic value used to pick which values are used for    building the stack.
-  * Move arguments to their right place.
-  * Change rsp to match the start of the fake stack.
-  * If syscall, set ssn in rax.
-  * If syscall, set r10 to hold the first argument.
-  * Jump to the function or syscall instruction.
+    * Build a fake stack using the values stored in the frame table     and   store it over the current stack pointer.
+    * Update the ciclic value used to pick which values are used for      building the stack.
+    * Move arguments to their right place.
+    * Change rsp to match the start of the fake stack.
+    * If syscall, set ssn in rax.
+    * If syscall, set r10 to hold the first argument.
+    * Jump to the function or syscall instruction.
 
 ## Thanks
 To Arash Parsa, aka [waldoirc](https://twitter.com/waldoirc), Athanasios Tserpelis, aka [trickster0](https://twitter.com/trickster012) and Alessandro Magnosi, aka [klezVirus](https://twitter.com/klezVirus) because of [SilentMoonwalk](https://klezvirus.github.io/RedTeaming/AV_Evasion/StackSpoofing/)
@@ -185,7 +203,6 @@ To Arash Parsa, aka [waldoirc](https://twitter.com/waldoirc), Athanasios Tserpel
 > ## TODO:
 > This includes things that I really dont want to forget, but more stuff could be added here. Not by now
 >### Docs/formatting:
->* Check that the setup instructions works. PRERELEASE
 >* Somehow improve stackSpoofHelper.x64.asm readability.
 >  
 >### Opsec:
