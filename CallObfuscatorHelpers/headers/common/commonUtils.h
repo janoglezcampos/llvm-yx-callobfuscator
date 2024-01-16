@@ -42,7 +42,7 @@
 // ============================ PUBLIC  FUNCTIONS ===============================
 
 /**
- * @brief Simple pseudo rng seeder. Initializes the context using seed.
+ * @brief Initializes the context using seed.
  *
  * @param p_ctx Context to be used for pseudo rng.
  * @param seed Seed to set for the context.

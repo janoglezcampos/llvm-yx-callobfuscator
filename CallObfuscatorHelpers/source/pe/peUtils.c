@@ -136,6 +136,10 @@ PVOID __callobf_getExceptionDirectoryAddress(const PVOID p_module, PDWORD p_size
 BOOL __callobf_getCodeBoundaries(PVOID p_module, PVOID *pp_base, PVOID *pp_top)
 {
     PIMAGE_SECTION_HEADER codeHeader = NULL;
+
+    if (!p_module || !pp_base || !pp_top)
+        return FALSE;
+
     // Get boundaries for gadget search
     PIMAGE_DOS_HEADER dos = p_module;
     PIMAGE_NT_HEADERS nth = (PVOID)((DWORD_PTR)dos + dos->e_lfanew);
