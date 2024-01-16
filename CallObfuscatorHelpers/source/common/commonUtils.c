@@ -24,24 +24,21 @@
 
 #include "common/commonUtils.h"
 
-PVOID __callobf_memset(const PVOID p_bytes, const BYTE c, size_t len)
+BOOL __callobf_srand(PDWORD p_ctx, DWORD seed)
 {
-    for (size_t i = 0; i < len; i++)
-        (((PCHAR)p_bytes)[i] = c);
-
-    return p_bytes;
+    if (!p_ctx)
+        return;
+    *p_ctx = seed;
 }
 
-DWORD __callobf_rand(PDWORD next) // RAND_MAX assumed as 256 + 20
+DWORD __callobf_rand(PDWORD p_ctx) // RAND_MAX assumed as 256 + 20
 {
-    *next = *next * 1103515245 + 12345;
-    return ((DWORD)(*next / 65536) % 0x7f) + 0x20;
+    if (!p_ctx)
+        return 0;
+    *p_ctx = *p_ctx * 1103515245 + 12345;
+    return ((DWORD)(*p_ctx / 65536) % 0x7f) + 0x20;
 }
 
-VOID __callobf_srand(PDWORD next, DWORD seed)
-{
-    *next = seed;
-}
 /**
  * @brief Simple hash function to produce 32 bit values from NULL terminated strings.
  *        Any other 32 bit hash like djb2 would work.
@@ -54,6 +51,9 @@ UINT32 __callobf_hashA(const PCHAR p_str)
     UINT h;
     PCHAR p;
     CHAR c;
+
+    if (!p_str)
+        return 0;
 
     h = 0;
     for (p = p_str; *p != '\0'; p++)
@@ -70,6 +70,9 @@ UINT32 __callobf_hashW(const PWCHAR p_str)
     PWCHAR p;
     WCHAR c;
 
+    if (!p_str)
+        return 0;
+
     h = 0;
     for (p = p_str; *p != 0; p++)
     {
@@ -84,6 +87,10 @@ UINT32 __callobf_hashU(const PUNICODE_STRING p_str)
     UINT32 h;
     PWCHAR p;
     WCHAR c;
+
+    if (!p_str)
+        return 0;
+
     DWORD_PTR p_end = ((DWORD_PTR)p_str->Buffer) + p_str->Length;
 
     h = 0;
@@ -105,6 +112,9 @@ PVOID __callobf_findBytes(
     BYTE checkByte = 0;
     BYTE maskByte = 0;
     DWORD matches = 0;
+
+    if (!bytes || mask)
+        return NULL;
 
     for (DWORD_PTR j = (DWORD_PTR)startAddr; j < ((DWORD_PTR)endAddr - byteCount); j++)
     {
