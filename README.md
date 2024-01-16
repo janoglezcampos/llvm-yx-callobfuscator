@@ -190,7 +190,9 @@ To Arash Parsa, aka [waldoirc](https://twitter.com/waldoirc), Athanasios Tserpel
 >* Somehow improve stackSpoofHelper.x64.asm readability (not today, it works)
 >  
 >### Opsec:
->* EAF bypass
+>* EAF bypass.
+>* Seach modules by its hash.
+>* Encript strings that cant be hashed.
 >
 >### General quality:
 >* Group all globals, or somehow make it clear in the code where all globals are declared.
