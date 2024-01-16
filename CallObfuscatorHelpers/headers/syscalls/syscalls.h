@@ -98,8 +98,26 @@ PVOID __callobf_getSyscallAddr(
     PVOID p_highBoundary);
 
 /**
- * @brief Check if the given function names matches the given hash in any of its
- *        Zw or Nt forms.
+ * @brief Given a function names, calculates its 32 bit representation using
+ *        the first two chars as "Zw"
+ *
+ * @param p_str Pointer to function name.
+ * @return UINT32 32 bit representation of function name.
+ */
+UINT32 __callobf_hashSyscallAsZw(PCHAR p_str);
+
+/**
+ * @brief Given a function names, calculates its 32 bit representation using
+ *        the first two chars as "Nt"
+ *
+ * @param p_str Pointer to function name.
+ * @return UINT32 32 bit representation of function name.
+ */
+UINT32 __callobf_hashSyscallAsNt(PCHAR p_str);
+
+/**
+ * @brief Check if the given function name matches the given hash in any of its
+ *        Zw or Nt forms. So ZwClose would match with the hash of NtClose.
  *
  * @param p_functionName Pointer to function name to check.
  * @param hash Hash of the function we are comparing to.

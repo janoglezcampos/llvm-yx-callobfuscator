@@ -88,7 +88,7 @@ BOOL __callobf_getNextSyscall(PSYSCALL_ITER_CTX p_ctx, PCHAR *pp_name, PVOID *pp
     return FALSE;
 }
 
-// TODO: Doc this
+// TODO: Improve this
 UINT32 __callobf_hashSyscallAsZw(PCHAR p_str)
 {
     UINT h = 0;

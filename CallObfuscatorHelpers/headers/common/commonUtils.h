@@ -121,9 +121,19 @@ PVOID __callobf_getStackBase();
  */
 PVOID __callobf_getStackLimit();
 
-// Not fully implemented, meant to return errors
-DWORD32 __callobf_getLastError();
-
+/**
+ * @brief Sets last error to given value.
+ *
+ * @param error 0 for success, 1 for error.
+ * @return VOID
+ */
 VOID __callobf_setLastError(DWORD32 error);
+
+/**
+ * @brief Returns the las value set by __callobf_setLastError
+ *        0 means success, eny other case means error.
+ * @return DWORD32  error
+ */
+DWORD32 __callobf_getLastError();
 
 #endif
