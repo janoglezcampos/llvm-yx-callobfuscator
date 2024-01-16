@@ -49,7 +49,7 @@ BOOL __callobf_initSyscallIter(PSYSCALL_ITER_CTX p_ctx, PVOID p_ntdll)
     return TRUE;
 }
 
-BOOL __callobf_iterateSyscalls(PSYSCALL_ITER_CTX p_ctx, PCHAR *pp_name, PVOID *pp_functionAddr)
+BOOL __callobf_getNextSyscall(PSYSCALL_ITER_CTX p_ctx, PCHAR *pp_name, PVOID *pp_functionAddr)
 {
     PIMAGE_DOS_HEADER p_dosHeaders = (PIMAGE_DOS_HEADER)p_ctx->p_ntdll;
     PIMAGE_EXPORT_DIRECTORY p_expDir = p_ctx->p_expDir;
@@ -170,7 +170,7 @@ BOOL __callobf_loadSyscall(
         return FALSE;
 
     // Remember: p_stubNameTmp is always the Zw version
-    while (__callobf_iterateSyscalls(&iterCtx, &p_stubNameTmp, &p_functionTmp))
+    while (__callobf_getNextSyscall(&iterCtx, &p_stubNameTmp, &p_functionTmp))
         if ((found = __callobf_checkHashSyscallA(p_stubNameTmp, nameHash)))
             break;
 
@@ -182,7 +182,7 @@ BOOL __callobf_loadSyscall(
     if (!__callobf_initSyscallIter(&iterCtx, p_ntdll))
         return FALSE;
 
-    while (__callobf_iterateSyscalls(&iterCtx, &p_stubNameTmp, &p_functionTmp))
+    while (__callobf_getNextSyscall(&iterCtx, &p_stubNameTmp, &p_functionTmp))
         if (p_functionTmp < p_function)
             ssn++;
 

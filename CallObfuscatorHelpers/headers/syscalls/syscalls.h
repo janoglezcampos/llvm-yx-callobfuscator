@@ -53,17 +53,16 @@ BOOL __callobf_initSyscallIter(
 
 /**
  * @brief Given a syscall iterator context, gets the next syscalls address and stub
- *        name, and modifies the ctx so the next call to __callobf_iterateSyscalls
- *        returns the next stub. The function names are always the Zw version of the
- *        function. If there is no more stubs remaining or an error
- *        occurs, return FALSE.
+ *        name, and modifies the ctx so the next call to this function returns the
+ *        following stub. The function names are always the Zw version of the function.
+ *        If there is no more stubs remaining or an error occurs, return FALSE.
  *
  * @param p_ctx Pointer to the iterator context.
  * @param pp_name Double pointer to return the function name.
  * @param pp_functionAddr Double pointer to return function address.
  * @return BOOL TRUE if next stub found, FALSE in any other case.
  */
-BOOL __callobf_iterateSyscalls(
+BOOL __callobf_getNextSyscall(
     PSYSCALL_ITER_CTX p_ctx,
     PCHAR *pp_name,
     PVOID *pp_functionAddr);
