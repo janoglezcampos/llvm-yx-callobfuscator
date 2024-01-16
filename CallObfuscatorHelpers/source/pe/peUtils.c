@@ -25,25 +25,6 @@
 #include "pe/peUtils.h"
 #include "common/commonUtils.h"
 
-PVOID __callobf_getExceptionDirectoryAddress(const PVOID p_module, PDWORD tSize)
-{
-    if (p_module == NULL)
-        return NULL;
-
-    if (*(PSHORT)p_module != PE_MAGIC)
-        return NULL;
-
-    PIMAGE_DOS_HEADER dosHeader = (PIMAGE_DOS_HEADER)p_module;
-    PIMAGE_NT_HEADERS ntHeader = (PIMAGE_NT_HEADERS)((DWORD_PTR)p_module + dosHeader->e_lfanew);
-
-    DWORD exceptionDirectoryRVA = ntHeader->OptionalHeader.DataDirectory[3].VirtualAddress;
-    if (exceptionDirectoryRVA == 0)
-        return NULL;
-
-    *tSize = ntHeader->OptionalHeader.DataDirectory[3].Size;
-    return (PVOID)((DWORD_PTR)p_module + exceptionDirectoryRVA);
-}
-
 PVOID __callobf_getModuleAddrA(const PCHAR p_moduleName)
 {
     return __callobf_getModuleAddrH(__callobf_hashA(p_moduleName));
@@ -87,7 +68,7 @@ PVOID __callobf_getFunctionAddrA(const PVOID p_module, const PCHAR p_functionNam
     return __callobf_getFunctionAddrH(p_module, __callobf_hashA(p_functionName));
 }
 
-PVOID __callobf_getFunctionAddrU(const PVOID p_module, const PWCHAR p_functionName)
+PVOID __callobf_getFunctionAddrW(const PVOID p_module, const PWCHAR p_functionName)
 {
     return __callobf_getFunctionAddrH(p_module, __callobf_hashW(p_functionName));
 }
@@ -105,6 +86,9 @@ PVOID __callobf_getFunctionAddrH(const PVOID p_module, const UINT32 funtionHash)
     DWORD cnt;
 
     if (p_module == NULL)
+        return NULL;
+
+    if (*(PSHORT)p_module != PE_MAGIC)
         return NULL;
 
     dos = p_module;
@@ -129,6 +113,25 @@ PVOID __callobf_getFunctionAddrH(const PVOID p_module, const UINT32 funtionHash)
     };
     return NULL;
 };
+
+PVOID __callobf_getExceptionDirectoryAddress(const PVOID p_module, PDWORD p_size)
+{
+    if (p_module == NULL)
+        return NULL;
+
+    if (*(PSHORT)p_module != PE_MAGIC)
+        return NULL;
+
+    PIMAGE_DOS_HEADER dosHeader = (PIMAGE_DOS_HEADER)p_module;
+    PIMAGE_NT_HEADERS ntHeader = (PIMAGE_NT_HEADERS)((DWORD_PTR)p_module + dosHeader->e_lfanew);
+
+    DWORD exceptionDirectoryRVA = ntHeader->OptionalHeader.DataDirectory[3].VirtualAddress;
+    if (exceptionDirectoryRVA == 0)
+        return NULL;
+
+    *p_size = ntHeader->OptionalHeader.DataDirectory[3].Size;
+    return (PVOID)((DWORD_PTR)p_module + exceptionDirectoryRVA);
+}
 
 BOOL __callobf_getCodeBoundaries(PVOID p_module, PVOID *pp_base, PVOID *pp_top)
 {
