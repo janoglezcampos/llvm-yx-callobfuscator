@@ -47,10 +47,10 @@ STACK_SPOOF_INFO __callobf_globalFrameTable = {
 
 DWORD64 __callobf_fillGadgetTable(
     PVOID p_module,
-    PFRAME_INFO p_entry,
+    PFRAME_INFO p_entryList,
     DWORD64 maxEntries,
-    PBYTE gadgetBytes,
-    PBYTE mask,
+    PBYTE p_gadgetBytes,
+    PBYTE p_mask,
     SIZE_T gadgetSize)
 {
     UWOP_ITERATOR_CONTEXT uwopCtx = {0};
@@ -67,13 +67,13 @@ DWORD64 __callobf_fillGadgetTable(
     DWORD64 entryCount = 0;
     BOOL valid = TRUE;
 
-    if (!p_module || !p_entry || !maxEntries || !gadgetBytes || !mask || !gadgetSize)
+    if (!p_module || !p_entryList || !maxEntries || !p_gadgetBytes || !p_mask || !gadgetSize)
         return entryCount;
 
     if (!__callobf_getCodeBoundaries(p_module, &gadgetLowerSearch, &gadgetHigherSearch))
         return entryCount;
 
-    while ((p_gadget = __callobf_findBytes(gadgetLowerSearch, gadgetHigherSearch, gadgetBytes, mask, gadgetSize)))
+    while ((p_gadget = __callobf_findBytes(gadgetLowerSearch, gadgetHigherSearch, p_gadgetBytes, p_mask, gadgetSize)))
     {
         gadgetLowerSearch = (PVOID)((DWORD_PTR)p_gadget + gadgetSize);
 
@@ -112,8 +112,8 @@ DWORD64 __callobf_fillGadgetTable(
         }
         if (valid)
         {
-            p_entry[entryCount].p_entryAddr = p_gadget;
-            p_entry[entryCount].frameSize = frameSize;
+            p_entryList[entryCount].p_entryAddr = p_gadget;
+            p_entryList[entryCount].frameSize = frameSize;
             entryCount++;
         }
     }
@@ -122,7 +122,7 @@ DWORD64 __callobf_fillGadgetTable(
 
 DWORD64 __callobf_fillFpRegFrameTable(
     PVOID p_module,
-    PFRAME_INFO p_entry,
+    PFRAME_INFO p_entryList,
     DWORD64 maxEntries)
 {
     UWOP_ITERATOR_CONTEXT uwopCtx = {0};
@@ -137,8 +137,8 @@ DWORD64 __callobf_fillFpRegFrameTable(
     BOOL valid = TRUE;
     BOOL foundFpRegOp = FALSE;
 
-    if (!p_module)
-        return FALSE;
+    if (!p_module || !p_entryList || !maxEntries)
+        return entryCount;
 
     if (!__callobf_createOrResetUnwindInfoIterator(&unwindInfoCtx, p_module))
         return entryCount;
@@ -186,8 +186,8 @@ DWORD64 __callobf_fillFpRegFrameTable(
             if (!__callobf_getCodeBoundariesLastUnwindInfo(&unwindInfoCtx, &p_begin, &p_end))
                 return entryCount;
 
-            p_entry[entryCount].p_entryAddr = MID_POINT_ADDR(p_begin, p_end); // random ptr inside function
-            p_entry[entryCount].frameSize = frameSize;
+            p_entryList[entryCount].p_entryAddr = MID_POINT_ADDR(p_begin, p_end); // random ptr inside function
+            p_entryList[entryCount].frameSize = frameSize;
             entryCount++;
         }
     }
@@ -197,7 +197,7 @@ DWORD64 __callobf_fillFpRegFrameTable(
 
 DWORD64 __callobf_fillSaveRbpFrameTable(
     PVOID p_module,
-    PSAVE_RBP_FRAME_INFO p_entry,
+    PSAVE_RBP_FRAME_INFO p_entryList,
     DWORD64 maxEntries)
 {
     UWOP_ITERATOR_CONTEXT uwopCtx = {0};
@@ -212,7 +212,7 @@ DWORD64 __callobf_fillSaveRbpFrameTable(
     BOOL valid = TRUE;
     BOOL foundSaveRbpOp = FALSE;
 
-    if (!p_module)
+    if (!p_module || !p_entryList || !maxEntries)
         return entryCount;
 
     if (!__callobf_createOrResetUnwindInfoIterator(&unwindInfoCtx, p_module))
@@ -268,16 +268,16 @@ DWORD64 __callobf_fillSaveRbpFrameTable(
             if (!__callobf_getCodeBoundariesLastUnwindInfo(&unwindInfoCtx, &p_begin, &p_end))
                 return entryCount;
 
-            p_entry[entryCount].p_entryAddr = MID_POINT_ADDR(p_begin, p_end); // random ptr inside function
-            p_entry[entryCount].frameSize = frameSize;
-            p_entry[entryCount].rbpOffset = __callobf_getOffsetWhereRegSaved(p_module, p_unwindInfo, RBP);
+            p_entryList[entryCount].p_entryAddr = MID_POINT_ADDR(p_begin, p_end); // random ptr inside function
+            p_entryList[entryCount].frameSize = frameSize;
+            p_entryList[entryCount].rbpOffset = __callobf_getOffsetWhereRegSaved(p_module, p_unwindInfo, RBP);
             entryCount++;
         }
     }
     return entryCount;
 }
 
-BOOL __callobf_fillStackSpoofTables(PSTACK_SPOOF_INFO p_frameTable, PVOID p_module)
+BOOL __callobf_fillStackSpoofTables(PSTACK_SPOOF_INFO p_stackSpoofInfo, PVOID p_module)
 {
 
     CASSERT((JUMP_RBX_GADGET_SIZE != 0));
@@ -286,44 +286,44 @@ BOOL __callobf_fillStackSpoofTables(PSTACK_SPOOF_INFO p_frameTable, PVOID p_modu
     CASSERT((sizeof(JUMP_RBX_GADGET) == sizeof(JUMP_RBX_GADGET_MASK)));
     CASSERT((sizeof(ADD_RSP_GADGET) == sizeof(ADD_RSP_GADGET_MASK)));
 
-    if (!p_frameTable || !p_module)
+    if (!p_stackSpoofInfo || !p_module)
         return FALSE;
 
     // Fill addRsp table
-    if (!(p_frameTable->addRspCount = __callobf_fillGadgetTable(
+    if (!(p_stackSpoofInfo->addRspCount = __callobf_fillGadgetTable(
               p_module,
-              p_frameTable->addRspList,
-              p_frameTable->entryCountPerList,
+              p_stackSpoofInfo->addRspList,
+              p_stackSpoofInfo->entryCountPerList,
               (PBYTE)ADD_RSP_GADGET,
               (PBYTE)ADD_RSP_GADGET_MASK,
               ADD_RSP_GADGET_SIZE)))
         return FALSE;
 
     // Fill jmpRbx table
-    if (!(p_frameTable->jmpRbxCount = __callobf_fillGadgetTable(
+    if (!(p_stackSpoofInfo->jmpRbxCount = __callobf_fillGadgetTable(
               p_module,
-              p_frameTable->jmpRbxList,
-              p_frameTable->entryCountPerList,
+              p_stackSpoofInfo->jmpRbxList,
+              p_stackSpoofInfo->entryCountPerList,
               (PBYTE)JUMP_RBX_GADGET,
               (PBYTE)JUMP_RBX_GADGET_MASK,
               JUMP_RBX_GADGET_SIZE)))
         return FALSE;
 
-    if (!(p_frameTable->setFpRegCount = __callobf_fillFpRegFrameTable(
+    if (!(p_stackSpoofInfo->setFpRegCount = __callobf_fillFpRegFrameTable(
               p_module,
-              p_frameTable->setFpRegList,
-              p_frameTable->entryCountPerList)))
+              p_stackSpoofInfo->setFpRegList,
+              p_stackSpoofInfo->entryCountPerList)))
         return FALSE;
 
-    if (!(p_frameTable->saveRbpCount = __callobf_fillSaveRbpFrameTable(
+    if (!(p_stackSpoofInfo->saveRbpCount = __callobf_fillSaveRbpFrameTable(
               p_module,
-              p_frameTable->saveRbpList,
-              p_frameTable->entryCountPerList)))
+              p_stackSpoofInfo->saveRbpList,
+              p_stackSpoofInfo->entryCountPerList)))
         return FALSE;
     return TRUE;
 }
 
-BOOL __callobf_initializeSpoofInfo(PSTACK_SPOOF_INFO p_frameTable)
+BOOL __callobf_initializeSpoofInfo(PSTACK_SPOOF_INFO p_stackSpoofInfo)
 {
     PVOID p_kernelBase = __callobf_getModuleAddrH(KERNELBASE_HASH);
     if (!p_kernelBase)
@@ -338,13 +338,13 @@ BOOL __callobf_initializeSpoofInfo(PSTACK_SPOOF_INFO p_frameTable)
     if (!p_ntdll)
         return FALSE;
 
-    if (!__callobf_fillStackSpoofTables(p_frameTable, p_kernelBase))
+    if (!__callobf_fillStackSpoofTables(p_stackSpoofInfo, p_kernelBase))
         return FALSE;
 
-    if (!(p_frameTable->p_entryRetAddr = __callobf_findEntryAddressOfReturnAddress(p_ntdll, p_kernel32)))
+    if (!(p_stackSpoofInfo->p_entryRetAddr = __callobf_findEntryAddressOfReturnAddress(p_ntdll, p_kernel32)))
         return FALSE;
 
-    p_frameTable->initialized = TRUE;
+    p_stackSpoofInfo->initialized = TRUE;
 
     return TRUE;
 }

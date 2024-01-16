@@ -67,36 +67,97 @@ typedef struct _FRAME_TABLE
 #pragma pack(pop)
 
 // ==========================================================
-// ================ EXTERNAL FUNCTIONS ======================
+// ================= EXTERNAL GLOBALS =======================
 
 extern STACK_SPOOF_INFO __callobf_globalFrameTable;
+// ==========================================================
+// ================ EXTERNAL FUNCTIONS ======================
+
+/**
+ * @brief Given stack spoof info, build a new spoofed stack picking different
+ *        entries each time. It will build the spoofed stach after its stack
+ *        frame ended, that means that is save to use the stack after a call
+ *        __callobf_buildSpoofedCallStack, if only we dont call more functions.
+ *        Even if its possible, this function should not be used from C.
+ *
+ * @return PVOID Pointer to start of the spoofed stack.
+ */
 extern PVOID __callobf_buildSpoofedCallStack(PSTACK_SPOOF_INFO);
 
 // ==========================================================
 // ================= PUBLIC  FUNCTIONS ======================
 
+/**
+ * @brief Given a module, finds the gadgets specified by the convination
+ *        of p_gadgetBytes, p_mask and gadgetSize. For every found gadget,
+ *        writes its frame info into the list given in p_entryList, until
+ *        no more gagets or the number of gadgets found equals maxEntries.
+ *
+ * @param p_module Module to search gadgets from.
+ * @param p_entryList List of frame info to add the gadgets to.
+ * @param maxEntries Maximun number of entries to add.
+ * @param p_gadgetBytes Byte pattern of the gadget.
+ * @param p_mask Mask to apply to read bytes before checking.
+ * @param gadgetSize Size of p_gadgetBytes buffer.
+ * @return DWORD64 Number of added entries to the list.
+ */
 DWORD64 __callobf_fillGadgetTable(
     PVOID p_module,
-    PFRAME_INFO p_entry,
+    PFRAME_INFO p_entryList,
     DWORD64 maxEntries,
-    PBYTE gadgetBytes,
-    PBYTE mask,
+    PBYTE p_gadgetBytes,
+    PBYTE p_mask,
     SIZE_T gadgetSize);
 
+/**
+ * @brief Given a module, finds frames containing UWOP_SET_FPREG. For every
+ *        found gadget, writes its frame info into the list given in p_entryList,
+ *        until no more frames are or the number of frames found equals maxEntries.
+ *
+ * @param p_module Module to search frames from.
+ * @param p_entryList List of frame info to add the frames to.
+ * @param maxEntries Maximun number of entries to add.
+ * @return DWORD64 Number of added entries to the list.
+ */
 DWORD64 __callobf_fillFpRegFrameTable(
     PVOID p_module,
-    PFRAME_INFO p_entry,
+    PFRAME_INFO p_entryList,
     DWORD64 maxEntries);
 
+/**
+ * @brief Given a module, finds frames containing a save of rsp to the stack. For every
+ *        found gadget, writes its frame info (including the offset where rbp is save)
+ *        into the list given in p_entryList, until no more frames are or the number of
+ *        frames found equals maxEntries.
+ *
+ * @param p_module Module to search frames from.
+ * @param p_entryList List of frame info to add the frames to.
+ * @param maxEntries Maximun number of entries to add.
+ * @return DWORD64 Number of added entries to the list.
+ */
 DWORD64 __callobf_fillSaveRbpFrameTable(
     PVOID p_module,
-    PSAVE_RBP_FRAME_INFO p_entry,
+    PSAVE_RBP_FRAME_INFO p_entryList,
     DWORD64 maxEntries);
 
+/**
+ * @brief Given a partially initialized stack spoof info, fills the four lists of frames
+ *        needed at runtime.
+ *
+ * @param p_stackSpoofInfo Pointer to spoof info containing the lists to be fille.
+ * @param p_module Module to search frames from.
+ * @return BOOL Success.
+ */
 BOOL __callobf_fillStackSpoofTables(
-    PSTACK_SPOOF_INFO p_frameTable,
+    PSTACK_SPOOF_INFO p_stackSpoofInfo,
     PVOID p_module);
 
+/**
+ * @brief Given an unitialized stack spoof info, initialized its basic fields.
+ *
+ * @param p_stackSpoofInfo Pointer to spoof to initialize.
+ * @return BOOL Success.
+ */
 BOOL __callobf_initializeSpoofInfo(
-    PSTACK_SPOOF_INFO p_frameTable);
+    PSTACK_SPOOF_INFO p_stackSpoofInfo);
 #endif
