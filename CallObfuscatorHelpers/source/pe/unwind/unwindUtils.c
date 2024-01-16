@@ -280,8 +280,8 @@ PVOID __callobf_findEntryAddressOfReturnAddress(PVOID p_ntdll, PVOID p_kernel32)
     if (!p_ntdll || !p_kernel32)
         return NULL;
 
-    p_BaseThreadInitThunk = __callobf_getFunctionAddrA(p_kernel32, "BaseThreadInitThunk");
-    p_RtlUserThreadStart = __callobf_getFunctionAddrA(p_ntdll, "RtlUserThreadStart");
+    p_BaseThreadInitThunk = __callobf_getFunctionAddrH(p_kernel32, BASETRHEADINITTHUNK_HASH);
+    p_RtlUserThreadStart = __callobf_getFunctionAddrH(p_ntdll, RTLUSERTHREADSTART_HASH);
 
     if (!p_BaseThreadInitThunk || !p_RtlUserThreadStart)
         return NULL;

@@ -218,7 +218,6 @@ To Arash Parsa, aka [waldoirc](https://twitter.com/waldoirc), Athanasios Tserpel
 >  
 >### Opsec:
 >* EAF bypass.
->* Seach modules by its hash. PRERELEASE
 >* Encript strings that cant be hashed.
 >
 >### General quality:

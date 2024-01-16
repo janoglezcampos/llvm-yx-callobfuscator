@@ -31,9 +31,17 @@
 // ==============================================================================
 // ============================= MACRO DEFINITIONS ==============================
 
-// Hashes:
+// Some hashes:
+
+#define NTDLL_HASH 0xE59C2120
+#define KERNEL32_HASH 0x70B456D4
 #define KERNELBASE_HASH 0xBD145C12
+
 #define MESSAGEBOXA_HASH 0x35FC1883
+#define LOADLIBRARYA_HASH 0x15E7E6C2
+#define BASETRHEADINITTHUNK_HASH 0xA2EC03A5
+#define RTLUSERTHREADSTART_HASH 0x362F51AF
+
 #define PE_MAGIC 0x5A4D
 
 // Constants:

@@ -42,7 +42,7 @@ HMODULE __callobf_loadLibrary(PCHAR p_dllName)
         return NULL;
 
     for (DWORD i = 0; i < __callobf_functionTable.count; i++)
-        if (__callobf_functionTable.entries[i].hash == __callobf_hashA("LoadLibraryA"))
+        if (__callobf_functionTable.entries[i].hash == LOADLIBRARYA_HASH)
             loadLibraryIndex = i;
 
     if (loadLibraryIndex == (DWORD)-1)
@@ -82,7 +82,7 @@ void *__callobf_loadFunction(PFUNCTION_TABLE_ENTRY p_fEntry)
     }
 
     p_fEntry->ssn = 0;
-    if (moduleHash == __callobf_hashA("ntdll.dll"))
+    if (moduleHash == NTDLL_HASH)
     {
         DEBUG_PRINT("Is ntdll");
         if (__callobf_loadSyscall(p_fEntry->hash, p_dllEntry->handle, &ssn, &p_function))

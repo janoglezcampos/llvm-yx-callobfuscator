@@ -354,12 +354,11 @@ BOOL __callobf_initializeSpoofInfo(PSTACK_SPOOF_INFO p_stackSpoofInfo)
     if (!p_kernelBase)
         return FALSE;
 
-    PVOID p_kernel32 = __callobf_getModuleAddrA("kernel32.dll");
+    PVOID p_kernel32 = __callobf_getModuleAddrH(KERNEL32_HASH);
     if (!p_kernelBase)
         return FALSE;
 
-    // iterateRuntimeFunctionTableNew(p_kernel32);
-    PVOID p_ntdll = __callobf_getModuleAddrA("ntdll.dll");
+    PVOID p_ntdll = __callobf_getModuleAddrH(NTDLL_HASH);
     if (!p_ntdll)
         return FALSE;
 
@@ -367,7 +366,6 @@ BOOL __callobf_initializeSpoofInfo(PSTACK_SPOOF_INFO p_stackSpoofInfo)
     if (!__callobf_fillStackSpoofTables(p_stackSpoofInfo, p_kernelBase))
         return FALSE;
 
-    DEBUG_PRINT("Correctly filled tables");
     if (!(p_stackSpoofInfo->p_entryRetAddr = __callobf_findEntryAddressOfReturnAddress(p_ntdll, p_kernel32)))
         return FALSE;
 
