@@ -46,6 +46,10 @@ HMODULE __callobf_loadLibrary(PCHAR p_dllName)
     }
     */
     DWORD loadLibraryIndex = -1;
+
+    if (!p_dllName)
+        return NULL;
+
     for (DWORD i = 0; __callobf_functionTable.count; i++)
         if (__callobf_functionTable.entries[i].hash == __callobf_hashA("LoadLibraryA"))
             loadLibraryIndex = i;
@@ -63,6 +67,9 @@ void *__callobf_loadFunction(PFUNCTION_TABLE_ENTRY p_fEntry)
     USHORT ssn = 0;
     PVOID p_function = NULL;
     BOOL isSyscall = FALSE;
+
+    if (!p_fEntry)
+        return NULL;
 
     p_dllEntry = &__callobf_dllTable.entries[p_fEntry->moduleIndex];
     moduleHash = __callobf_hashA(p_dllEntry->name);

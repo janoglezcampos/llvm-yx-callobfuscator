@@ -5,8 +5,8 @@
 #include "common/wintypes/typedefs.h"
 #include "stackSpoof/stackSpoof.h"
 
-// ==========================================================
-// ================= STRUCT DEFINITIONS =====================
+// ==============================================================================
+// ============================ STRUCT DEFINITIONS ==============================
 
 #pragma pack(push, 1)
 typedef struct _DLL_TABLE_ENTRY
@@ -20,7 +20,10 @@ typedef struct _FUNCTION_TABLE_ENTRY
     DWORD hash;
     DWORD moduleIndex;
     DWORD argCount;
-    DWORD ssn; // As any other time that ssn is defined as a 4byte value, means that the to lower bytes are either 0xFF or 0x00, and means if is actually a valid ssn
+    DWORD ssn; // As any other time that ssn is defined as a 4byte value, the
+               // lower bytes are set to either 0xFF or 0x00, and it means if
+               // it is actually a valid ssn. So we can check if the function
+               // is a syscall by checking if any of thos bits are set to 1.
     PVOID functionPtr;
 } FUNCTION_TABLE_ENTRY, *PFUNCTION_TABLE_ENTRY;
 
@@ -39,20 +42,38 @@ typedef struct _FUNCTION_TABLE
 } FUNCTION_TABLE, *PFUNCTION_TABLE;
 #pragma pack(pop)
 
-// ==========================================================
-// ====================== GLOBALS ===========================
+// ==============================================================================
+// =============================== GLOBALS ======================================
 
 unsigned long __callobf_lastError = 0;
 
-// ==========================================================
-// ================= EXTERNAL GLOBALS =======================
+// ==============================================================================
+// =========================== EXTERNAL GLOBALS =================================
 
 extern DLL_TABLE __callobf_dllTable;
 extern FUNCTION_TABLE __callobf_functionTable;
 
-// ==========================================================
-// ================ EXTERNAL FUNCTIONS ======================
+// ==============================================================================
+// =========================== EXTERNAL FUNCTIONS ===============================
 
+/**
+ * @brief Given all the information about a function call, generates an obfuscated
+ *        stack, and "applies indirect syscalling" if possible to the call.
+ *
+ *        Note: Returning errors is still something that is not resolved.
+ *
+ * @param p_function Pointer to function to be called, in case of syscall, this is
+ *                   the syscall instruction pointer.
+ * @param ssn SSN of the syscall, in case it is.
+ * @param isSyscall If it is a syscall.
+ * @param argCount Number of arguments taken by the function to be called.
+ * @param p_args Pointer to arguments to be passed to the function.
+ * @param p_returnAddress Address containing the return address of the entry point
+ *                        for the current thread.
+ * @param p_globalFrameTable Pointer to stack spoof info to build the spoofed
+ *                           stack with.
+ * @return void* Return value of the called function.
+ */
 extern void *__callobf_doCall(
     PVOID p_function,
     WORD ssn,
@@ -62,15 +83,38 @@ extern void *__callobf_doCall(
     PVOID p_returnAddress,
     PSTACK_SPOOF_INFO p_globalFrameTable);
 
-// ==========================================================
-// ================= PUBLIC  FUNCTIONS ======================
+// ==============================================================================
+// ============================ PUBLIC  FUNCTIONS ===============================
 
+/**
+ * @brief Main function of the pass. This function can replace tha call to any
+ *        native windows x64 function, by giving it an index to the function
+ *        table containing the info about the function being replaced. All the
+ *        arguments of the function being replaced, must be passed after the index.
+ *
+ * @param index Index to the function table.
+ * @param ... Function call arguments.
+ * @return void* Return value of the replaced function.
+ */
 void *__callobf_callDispatcher(DWORD32 index, ...);
 
-// ==========================================================
-// ================= PRIVATE FUNCTIONS ======================
+// ==============================================================================
+// =========================== PRIVATE  FUNCTIONS ===============================
 
+// TODO: Put this to work
+/**
+ * @brief Work in progress.
+ *
+ * @return unsigned
+ */
 unsigned long __callobf_getLastError();
+
+/**
+ * @brief Given a function entry, loads all it non initialized fields.
+ *
+ * @param p_fEntry Pointer to a function table entry.
+ * @return void* Pointer to function, or NULL.
+ */
 void *__callobf_loadFunction(PFUNCTION_TABLE_ENTRY p_fEntry);
 
 #endif
