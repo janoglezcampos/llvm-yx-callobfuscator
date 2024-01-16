@@ -1,4 +1,3 @@
-
 ; @file stackSpoofHelper.x64.asm
 ; @author Alejandro González (@httpyxel)
 ; @brief Assembly utilities to build spoofed stacks for windows x64 native function.

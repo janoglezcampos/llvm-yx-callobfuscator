@@ -1,4 +1,3 @@
-
 ; @file callDispatcher.x64.asm
 ; @author Alejandro González (@httpyxel)
 ; @brief Assembly utilities  to dispatch windows native calls.
