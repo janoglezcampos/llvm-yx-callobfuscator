@@ -195,6 +195,9 @@ To Arash Parsa, aka [waldoirc](https://twitter.com/waldoirc), Athanasios Tserpel
 >### General quality:
 >* Group all globals, or somehow make it clear in the code where all globals are declared.
 >* Put MIN_ADD_RSP_FRAME_SIZE to work.
+>* Better error propagation and implement callObfGetLastError()
+>* Optionally validate config file entries against local dlls
+>* Optionally return load errors through messagebox pop ups, similarly to how ms does with CRTs
 >
 >### Functionality:
 >* Handle invoke instructions and exception stuff (should not happen in C but...)

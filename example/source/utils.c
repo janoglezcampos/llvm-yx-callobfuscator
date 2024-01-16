@@ -6,9 +6,6 @@ PVOID memoryTest()
 {
     PVOID p_baseAddress = NULL;
     SIZE_T requiredSize = 0x1100;
-    SIZE_T more = 0x1100;
-    SIZE_T vars = 0x1100;
-    HANDLE currHandle = (HANDLE)-1;
 
     NTSTATUS status = NtAllocateVirtualMemory((HANDLE)-1, &p_baseAddress, 0, &requiredSize, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
 
