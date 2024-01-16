@@ -26,37 +26,39 @@
 #include "common/commonUtils.h"
 #include "common/debug.h"
 
+BOOL __callobf_initSyscallIter(PSYSCALL_ITER_CTX p_ctx, PVOID p_ntdll)
+{
+    if (!p_ctx || !p_ntdll)
+        return FALSE;
+
+    PIMAGE_DOS_HEADER p_dosHeaders = (PIMAGE_DOS_HEADER)p_ntdll;
+    PIMAGE_NT_HEADERS p_ntHeaders = (PVOID)((DWORD_PTR)p_dosHeaders + p_dosHeaders->e_lfanew);
+    PIMAGE_DATA_DIRECTORY p_dataDir = (PVOID)(&p_ntHeaders->OptionalHeader.DataDirectory[0]);
+
+    if (!p_dataDir->VirtualAddress)
+    {
+        DEBUG_PRINT("No data directory virtual address");
+        return FALSE;
+    }
+
+    if (!(p_ctx->p_expDir = (PVOID)((DWORD_PTR)p_dosHeaders + p_dataDir->VirtualAddress)))
+        return FALSE;
+
+    p_ctx->p_ntdll = p_ntdll;
+    p_ctx->lastEntry = 0;
+    return TRUE;
+}
+
 BOOL __callobf_iterateSyscalls(PSYSCALL_ITER_CTX p_ctx, PCHAR *pp_name, PVOID *pp_functionAddr)
 {
     PIMAGE_DOS_HEADER p_dosHeaders = (PIMAGE_DOS_HEADER)p_ctx->p_ntdll;
     PIMAGE_EXPORT_DIRECTORY p_expDir = p_ctx->p_expDir;
 
-    if (!p_dosHeaders)
-    {
+    if (!p_ctx || !pp_name || !pp_functionAddr)
         return FALSE;
-    }
 
-    if (!p_expDir)
-    {
-
-        PIMAGE_NT_HEADERS p_ntHeaders = (PVOID)((DWORD_PTR)p_dosHeaders + p_dosHeaders->e_lfanew);
-
-        PIMAGE_DATA_DIRECTORY p_dataDir = (PVOID)(&p_ntHeaders->OptionalHeader.DataDirectory[0]);
-
-        if (!p_dataDir->VirtualAddress)
-        {
-            DEBUG_PRINT("No data directory virtual address");
-            return FALSE;
-        }
-
-        p_ctx->p_expDir = p_expDir = (PVOID)((DWORD_PTR)p_dosHeaders + p_dataDir->VirtualAddress);
-    }
-
-    if (!p_expDir)
-    {
-        DEBUG_PRINT("No export dir pointer");
+    if (!p_dosHeaders || !p_expDir)
         return FALSE;
-    }
 
     PDWORD aof = (PVOID)((DWORD_PTR)p_dosHeaders + p_expDir->AddressOfFunctions);
     PDWORD aon = (PVOID)((DWORD_PTR)p_dosHeaders + p_expDir->AddressOfNames);
@@ -86,48 +88,23 @@ BOOL __callobf_iterateSyscalls(PSYSCALL_ITER_CTX p_ctx, PCHAR *pp_name, PVOID *p
     return FALSE;
 }
 
-UINT32 __callobf_hashSyscallA(PCHAR p_str, BOOL asZw)
-{
-    UINT h;
-    PCHAR p;
-    CHAR c;
-
-    h = 0;
-
-    if (p_str[0] == 'Z' && p_str[1] == 'w')
-    {
-        if (!asZw)
-        {
-            h = HASH_MULTIPLIER * h + 'n';
-            h = HASH_MULTIPLIER * h + 't';
-            p_str += 2;
-        }
-    }
-    else if (p_str[0] == 'N' && p_str[1] == 't')
-    {
-        if (asZw)
-        {
-            h = HASH_MULTIPLIER * h + 'z';
-            h = HASH_MULTIPLIER * h + 'w';
-            p_str += 2;
-        }
-    }
-
-    for (p = p_str; *p != '\0'; p++)
-    {
-        c = (*p >= 65 && *p <= 90) ? *p + 32 : *p;
-        h = HASH_MULTIPLIER * h + c;
-    }
-    return h;
-}
-
 BOOL __callobf_checkHashSyscallA(PCHAR p_functionName, DWORD32 hash)
 {
-
-    DWORD32 hashAsZw = __callobf_hashSyscallA(p_functionName, TRUE);
-    DWORD32 hashAsNt = __callobf_hashSyscallA(p_functionName, FALSE);
-    if (!hashAsZw || !hashAsZw)
+    if (!p_functionName)
         return FALSE;
+
+    WORD backup = *(PWORD)p_functionName;
+    // 0x775A = wZ (little endian)
+    // 0x744E = tN (little endian)
+
+    if (backup != 0x775A && backup != 0x744E)
+        return FALSE;
+
+    *(PWORD)p_functionName = 0x775A;
+    DWORD32 hashAsZw = __callobf_hashA(p_functionName);
+
+    *(PWORD)p_functionName = 0x744E;
+    DWORD32 hashAsNt = __callobf_hashA(p_functionName);
 
     return (BOOL)(hash == hashAsZw || hash == hashAsNt);
 }
@@ -146,11 +123,15 @@ PVOID __callobf_getSyscallAddr(PVOID p_function, PVOID p_lowBoundary, PVOID p_hi
     {
         if (higherRunner < (PBYTE)p_highBoundary - 0x3)
         {
+            // Here we are just picking the lower 3 bytes of *higherRunner, the xoring with a random value
+            // 0xde6edba2 is the result of 0xc3050f (syscall ret (little endian)) xor 0xdeaddead.
+            // Then (A ^ C == B ^ C) if (A == B)
+            // The idea is to remove 0xc3050f from code
+            // TODO: Check if the compiler is optimizing this
             tmpVal = ((*(PUSHORT)higherRunner) & 0x00FFFFFF) ^ 0xdeaddead;
             if (tmpVal == (USHORT)0xde6edba2)
-            {
                 return higherRunner;
-            }
+
             higherRunner++;
         }
 
@@ -158,9 +139,8 @@ PVOID __callobf_getSyscallAddr(PVOID p_function, PVOID p_lowBoundary, PVOID p_hi
         {
             tmpVal = ((*(PUSHORT)lowerRunner) & 0x00FFFFFF) ^ 0xdeaddead;
             if (tmpVal == (USHORT)0xde6edba2)
-            {
                 return lowerRunner;
-            }
+
             lowerRunner--;
         }
     }
@@ -183,40 +163,35 @@ BOOL __callobf_loadSyscall(
 
     BOOL found = FALSE;
 
-    if (!p_ntdll)
+    if (!p_ntdll || !p_ssn || !pp_function)
         return FALSE;
 
-    iterCtx.p_ntdll = p_ntdll;
+    if (!__callobf_initSyscallIter(&iterCtx, p_ntdll))
+        return FALSE;
 
+    // Remember: p_stubNameTmp is always the Zw version
     while (__callobf_iterateSyscalls(&iterCtx, &p_stubNameTmp, &p_functionTmp))
-    {
-        if (__callobf_checkHashSyscallA(p_stubNameTmp, nameHash))
-        {
-            found = TRUE;
+        if ((found = __callobf_checkHashSyscallA(p_stubNameTmp, nameHash)))
             break;
-        }
-    }
 
     if (!found)
-    {
         return FALSE;
-    }
 
     p_function = p_functionTmp;
 
-    iterCtx.lastEntry = 0;
+    if (!__callobf_initSyscallIter(&iterCtx, p_ntdll))
+        return FALSE;
 
     while (__callobf_iterateSyscalls(&iterCtx, &p_stubNameTmp, &p_functionTmp))
-    {
         if (p_functionTmp < p_function)
             ssn++;
-    }
 
     PIMAGE_NT_HEADERS p_ntHeaders = (PIMAGE_NT_HEADERS)(p_ntdll + ((PIMAGE_DOS_HEADER)p_ntdll)->e_lfanew);
     PIMAGE_SECTION_HEADER p_sectionHeaders = IMAGE_FIRST_SECTION(p_ntHeaders);
-    PIMAGE_SECTION_HEADER p_currentSection = NULL;
     PVOID p_sectionStart = NULL;
     PVOID p_sectionEnd = NULL;
+
+    found = FALSE;
 
     for (WORD sectionIndex = 0; sectionIndex < p_ntHeaders->FileHeader.NumberOfSections; sectionIndex++)
     {
@@ -226,13 +201,12 @@ BOOL __callobf_loadSyscall(
 
         if (((DWORD_PTR)p_sectionStart <= (DWORD_PTR)p_function) && ((DWORD_PTR)p_function < (DWORD_PTR)p_sectionEnd))
         {
-
-            p_currentSection = p_sectionHeader;
+            found = TRUE;
             break;
         }
     }
 
-    if (!p_currentSection)
+    if (!found)
         return FALSE;
 
     if (!(p_functionTmp = __callobf_getSyscallAddr(p_function, p_sectionStart, p_sectionEnd)))
