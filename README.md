@@ -93,7 +93,7 @@ All the commands run in the following steps are supossed to be used in an MSYS2 
     Remember the path format changes from Windows, where C: becomes /c/ (because PATH separator is ```:```), for example, in my case would:
 
         export PATH=$PATH:"/c/Users/<user>/llvm-plugins"
-        export LIBRARY_PATH=$LIBRARY_PATH:"/c/Users/<user>/llvm-plugins/callobfuscator/plugin-helpers"
+        export LIBRARY_PATH=$LIBRARY_PATH:"/c/Users/<user>/llvm-plugins/llvm-yx-callobfuscator/plugin-helpers"
      
 
 ## Usage and example
@@ -125,15 +125,15 @@ Now is time to run the pass. Remember that there is a makefile already set up in
 
 * Run obfusction pass:
 
-        opt -load-pass-plugin="<path to the pass dll>" -passes="callobfuscator-pass" ./build/irs/example.ll -o ./build/irs/example.obf.ll
+        opt -S -load-pass-plugin="<path to the pass dll>" -passes="callobfuscator-pass" ./build/irs/example.ll -o ./build/irs/example.obf.ll
     
     If added install path to user or system path, then:
 
-        opt -load-pass-plugin="llvm-yx-callobfuscator/CallObfuscatorPlugin.dll" -passes="callobfuscator-pass" ./build/irs/example.ll -o ./build/irs/example.obf.ll
+        opt -S -load-pass-plugin="llvm-yx-callobfuscator/CallObfuscatorPlugin.dll" -passes="callobfuscator-pass" ./build/irs/example.ll -o ./build/irs/example.obf.ll
 
 * Run optimization passes:
 
-        opt -O3 ./build/irs/example.obf.ll -o ./build/irs/example.op.ll
+        opt -S -O3 ./build/irs/example.obf.ll -o ./build/irs/example.op.ll
 
 * Compile to windows x86_64 assembly:
   

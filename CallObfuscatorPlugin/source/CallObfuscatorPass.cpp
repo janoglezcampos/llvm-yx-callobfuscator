@@ -151,7 +151,7 @@ namespace callobfuscatorpass
     PreservedAnalyses CallObfuscatorPass::run(Module &M,
                                               ModuleAnalysisManager &AM)
     {
-        auto &Ctx = M.getContext();
+        LLVMContext &ctx = M.getContext();
         if (!configLoaded)
         {
             configLoaded = true; // No matter the result, try only once
@@ -164,11 +164,11 @@ namespace callobfuscatorpass
 
         callobfuscator::CallObfuscator obf = callobfuscator::CallObfuscator(M);
 
-        LLVMContext &ctx = M.getContext();
         FunctionType *p_loadLibraryType = FunctionType::get(
             PointerType::get(ctx, 0),
             {PointerType::get(ctx, 0)},
             false);
+
         FunctionCallee c = M.getOrInsertFunction("LoadLibraryA", p_loadLibraryType);
         Function &loadLibrary = cast<Function>(*c.getCallee());
         obf.addHook({loadLibrary, "kernel32.dll", false, 0});

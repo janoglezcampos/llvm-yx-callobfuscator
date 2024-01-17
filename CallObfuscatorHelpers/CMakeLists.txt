@@ -1,4 +1,6 @@
 set(CLANG_DEBUG_OPTIONS "-D__CALLOBF_DEBUG")
+# This migth be wrong, I only want to apply this options to the target defined here, 
+# but Im applying them to the hole project...
 set(CLANG_RELEASE_OPTIONS "-O3 -nostdlib -ffunction-sections -Wall -Wextra -fno-ident")
 
 set(NASM_DEBUG_OPTIONS "")
@@ -17,8 +19,6 @@ add_library(CallObfuscatorHelpers STATIC
             source/stackSpoof/asm/stackSpoofHelper.x64.asm
             )
 
-#llvm_map_components_to_libnames(llvm_libs core linker)
-#target_link_libraries(LLVMCallDispatcher ${llvm_libs})
 target_include_directories(CallObfuscatorHelpers PRIVATE headers)
 
 set_target_properties(CallObfuscatorHelpers PROPERTIES PREFIX "lib")
@@ -31,11 +31,5 @@ set(CMAKE_C_FLAGS_MINSIZEREL "${CMAKE_C_FLAGS_MINSIZEREL} ${CLANG_RELEASE_OPTION
 set(CMAKE_NASM_FLAGS_DEBUG "${CMAKE_NASM_FLAGS_DEBUG} ${NASM_DEBUG_OPTIONS}")
 set(CMAKE_NASM_FLAGS_RELEASE "${CMAKE_NASM_FLAGS_RELEASE} ${NASM_RELEASE_OPTIONS}")
 set(CMAKE_NASM_FLAGS_MINSIZEREL "${CMAKE_NASM_FLAGS_MINSIZEREL} ${NASM_RELEASE_OPTIONS}")
-
-#target_compile_options(CallObfuscatorHelpers PRIVATE "$<$<CONFIG:MINSIZEREL>:$<$<COMPILE_LANGUAGE:C>:${CLANG_RELEASE_OPTIONS}>>")
-#target_compile_options(CallObfuscatorHelpers PRIVATE "$<$<CONFIG:RELEASE>:$<$<COMPILE_LANGUAGE:C>:${CLANG_RELEASE_OPTIONS}>>")
-
-#target_compile_options(CallObfuscatorHelpers PRIVATE "$<$<CONFIG:MINSIZEREL>:$<$<COMPILE_LANGUAGE:ASM_NASM>:${NASM_RELEASE_OPTIONS}>>")
-#target_compile_options(CallObfuscatorHelpers PRIVATE "$<$<CONFIG:RELEASE>:$<$<COMPILE_LANGUAGE:ASM_NASM>:${NASM_RELEASE_OPTIONS}>>")
 
 install(TARGETS CallObfuscatorHelpers DESTINATION ${PROJECT_NAME}/plugin-helpers)
