@@ -10,13 +10,6 @@ This project is a plugin meant to be used with [opt](https://llvm.org/docs/Comma
 
 **Usage brief**: Set up a config file indicating the functions to be hooked, write your C code without caring about Windows function calls, compile with clang to generate .ir files, give them to opt along with this plugin, opt hooks functions, llc compiles the .ir to a.obj, and ld links it to an executable that automatically obfuscates function calls.
 
-
-**Disclaimer**: This only works for code that you compile. This means that if you are linking against a compiled standard library and that library makes a call to an external dll, it can not be covered by opt (unless the library has an llvm-ir version, but this is uncommon).
-
-**Disclaimer 2**: Only tested with C code.
-
-**Disclaimer 3**: Early development stage, little testing has been done. Error reporting is appreciated.
-
 ## Table of Contents
 > * [Setup](#setup)
 > * [Usage and example](#usage-and-example)
