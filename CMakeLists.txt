@@ -8,7 +8,7 @@ set(CMAKE_C_COMPILER clang)
 set(CMAKE_CXX_COMPILER clang++)
 #TODO: Generate errors on bad arch/SO
 
-project(llvm-yx-callobfuscator LANGUAGES C CXX ASM_NASM)
+project(llvm-yx-callobfuscator LANGUAGES C CXX ASM_NASM VERSION 0.1.0)
 
 find_package(LLVM REQUIRED CONFIG)
 
