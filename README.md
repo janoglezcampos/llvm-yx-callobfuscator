@@ -8,11 +8,14 @@ LLVM plugin to transparently apply stack spoofing and indirect syscalls to Windo
 This project is a plugin meant to be used with [opt](https://llvm.org/docs/CommandGuide/opt.html), the LLVM optimizer. Opt will use the pass included in this plugin to hook calls to Windows functions based on a config file and point those calls to a single function, which, given an ID identifying the function to be called, will apply dynamic stack obfuscation, and if the function is a syscall stub, will invoke it using "indirect syscalling".
 
 
-**Brief**: Set up a config file indicating the functions to be hooked, write your code without caring about Windows function calls, compile with clang to generate .ir files, give them to opt along with this plugin, opt hooks functions, llc compiles the .ir to a.obj, and ld links it to an executable that automatically obfuscates function calls.
+**Usage brief**: Set up a config file indicating the functions to be hooked, write your C code without caring about Windows function calls, compile with clang to generate .ir files, give them to opt along with this plugin, opt hooks functions, llc compiles the .ir to a.obj, and ld links it to an executable that automatically obfuscates function calls.
 
 
-**Disclaimer**: This only works for code that you compile. This means that if you are linking against a compiled standard library and that library makes a call to a function, it will not be covered by opt (unless the library has an llvm-ir version, but this is uncommon).
+**Disclaimer**: This only works for code that you compile. This means that if you are linking against a compiled standard library and that library makes a call to an external dll, it can not be covered by opt (unless the library has an llvm-ir version, but this is uncommon).
 
+**Disclaimer 2**: Only tested with C code.
+
+**Disclaimer 3**: Early development stage, little testing has been done. Error reporting is appreciated.
 
 ## Table of Contents
 > * [Setup](#setup)
@@ -25,15 +28,15 @@ This project is a plugin meant to be used with [opt](https://llvm.org/docs/Comma
 > * [TODO](#todo)
 
 ## Setup
-This setup is written for Windows, but it should be possible to setup this environment in Linux easily (still output executables can only be built for Windows x64). This was tested with LLVM 16.x and 17.x.
+This instructions are written for Windows, but it should be possible to setup this environment in Linux easily (still output executables can only be built for Windows x64). Tested with LLVM 16.x and 17.x.
 
-All the commands run in the following steps are supossed to be used in an MSYS2 terminal ie they have Linux format.
+All the commands described in the following steps are supossed to be used in an MSYS2 terminal ie they have Linux format.
 
 * **Dependencies**:
 
-    To be able to compile this project, we mainly need 2 things: LLVM and CMAKE.
+    To be able to compile this project, we mainly need 2 things: LLVM (libraries and headers, along with some tools) and CMAKE.
 
-    LLVM can be either compiled from source, downloaded from the LLVM releases, or installed through MSYS2. For a guide on how to compile LLVM from source and compile a basic plugin, [see this](https://github.com/janoglezcampos/llvm-pass-plugin-skeleton?tab=readme-ov-file#llvm-optimization-pass-skeleton). We also need to set up CMAKE and our build tools. Clang is required to compile the helpers library. For the linker, we don't care too much. Lastly, as a generator, I prefer Ninja, but make, nmake or msbuild will work.
+    LLVM libraries and tools can be either compiled from source, downloaded from the LLVM releases, or installed through MSYS2 (using pacman). To make it easier, here we will use MSYS2. We also need to set up CMAKE and our build tools. Clang is required to compile the helpers library. For the linker, we don't care too much. Lastly, as a generator, I prefer Ninja, but make, nmake or msbuild will work.
 
     Everything listed above can be installed with pacman by using MSYS2.
 
@@ -46,7 +49,8 @@ All the commands run in the following steps are supossed to be used in an MSYS2 
     * Install Ninja: ```pacman -S mingw-w64-x86_64-ninja```
     * Install Git: ```pacman -S git```
 
-    Restart the MSYS2 terminal, It may help with env variables, and gives luck for the followinf building ritual.
+    Restart the MSYS2 terminal, It may help with env variables, and gives luck for the following building ritual.
+
 * **Building**:
   
     First, clone this project, pretty obvious:
@@ -66,9 +70,9 @@ All the commands run in the following steps are supossed to be used in an MSYS2 
 
         mkdir build; cd build
 
-    Choose an install location. I recommend doing this so it will be easier to either get the files in the right place or just be able to pick them up easily. Also, the [usage](#usage-and-example) section will use this folder as the relative folder for accessing these files, so if you add it to the PATH, the commands will work right away. I use  ```C:/Users/<my-user>/llvm-plugins```, but creating a folder in the project directory called ```install```, side by side with ```build``` will do. This folder will not be edited if you don't run the install command, but you will have to go get the files in the build folder.
+    Choose an install location. I recommend doing this so it will be easier to either get the files in the right place or just be able to pick them up easily. Also, the [usage](#usage-and-example) section will use this folder as the relative folder for accessing these files when needed, so if you add it to the PATH, the commands will work right away. I use  ```C:/Users/<my-user>/llvm-plugins```, but creating a folder in the project directory called ```install```, side by side with ```build``` will do. This folder will not be edited if you don't run the install command, but you will have to go get the files in the build folder.
 
-    Configure the project; here you specify the installation folder. ```DCMAKE_BUILD_TYPE``` will set the default mode: Debug, Release or MinSizeRel. Depending on which generator you are using, you are going to be able to change this later or not. I use Nija as the generator, but you can use any other.
+    Configure the project; here you specify the installation folder. ```DCMAKE_BUILD_TYPE``` will set the default mode: Debug, Release or MinSizeRel. Depending on which generator you are using, you are going to be able to change this later or not (means you will have to reconfigure or not). I use Nija as generator, but you can use any other.
 
         cmake -G Ninja -DCMAKE_INSTALL_PREFIX="<path_to_install_folder>" -DCMAKE_BUILD_TYPE=Release ./..
 
@@ -76,13 +80,13 @@ All the commands run in the following steps are supossed to be used in an MSYS2 
 
         cmake --build .
 
-    Move the generated files to the install directory you chose before. If you don't want to use the install feature of CMake, just get the files (```libCallObfuscatorHelpers.a``` and ```CallObfuscatorPlugin.dll```) from the build directory and put them in a place you remember; you will need them.
+    Move the generated files to the install directory you chose before. If you don't want to use the install "feature" of CMake, just get the files (```libCallObfuscatorHelpers.a``` and ```CallObfuscatorPlugin.dll```) from the build directory and put them in a place you remember; you will need them.
 
         cmake --build . --target install
 
     At this point, you should have two files:
     * ```libCallObfuscatorHelpers.a```: A C library that includes all the logic that needs to be executed at runtime.  
-    * ```CallObfuscatorPlugin.dll```:  The actual plugin, written in C++, that will be compiled and linked to a dll.
+    * ```CallObfuscatorPlugin.dll```:  The actual plugin containing the pass, will be given as an offer to opt.
 
     Once all this is done I like to add the path I used to install the plugin to the user path, so it is easier to import it after.
     To do this, add the following line to ```~/.bash_profile``` if exists, if not, add it to ```~/.profile```. Also, modify the library path, so you wont need to specify the path to helpers everytime you link.
@@ -97,19 +101,17 @@ All the commands run in the following steps are supossed to be used in an MSYS2 
      
 
 ## Usage and example
-First of all, we need to set up our configuration file. In this section, we will be building the project found in the example folder, so the config file is already made. You can add any number of functions to the file, and the functions do not need to appear in the program.
+First of all, we need to set up our configuration file. In this section, we will be using the config file found in the ```./example``` folder. You can add any number of functions to the file, and the functions do not need to appear in the program.
 
-The plugin will get the path to the config from an environment variable called ```LLVM_OBF_FUNCTIONS```. You can either add it along with all the other environment variables for the user, the system, or just set it up for the current terminal. You can also set it in the makefile, so it is only set for the compilation.
+The plugin will get the path to the config file from an environment variable called ```LLVM_OBF_FUNCTIONS```. You can either add it along with all the other environment variables for the user, the system, or just set it up for the current terminal. You can also set it from a makefile, if using one. To set the example config for the current terminal:
 
-Now is time to run the pass. Remember that there is a makefile already set up inside the example project. To better understand the process shown here, [see this](https://github.com/janoglezcampos/llvm-pass-plugin-skeleton?tab=readme-ov-file#running-you-pass).
+        export LLVM_OBF_FUNCTIONS=<absolute path to callobfuscator.conf>
+
+Now it is time to run the pass. A more detailed explanation about every step can be found [here](https://github.com/janoglezcampos/llvm-pass-plugin-skeleton?tab=readme-ov-file#running-you-pass).
 
 * Go inside the example folder and create a build folder; inside, create 2 folders: irs and objs.
 
         cd example; mkdir build; mkdir build/irs; mkdir build/objs
-
-* Set ```LLVM_OBF_FUNCTIONS``` to point to the full path of ```callobfuscator.conf```, only for this terminal:
-
-        export LLVM_OBF_FUNCTIONS=<absolute path to callobfuscator.conf>
 
 ### NOTE: Any path in MYSYS2 must be written using / and not \
 
@@ -141,7 +143,7 @@ Now is time to run the pass. Remember that there is a makefile already set up in
 
 * Link:
 
-        clang ./build/objs/example.obj -o ./build/example.exe -L"<path_to_install_folder>/callobfuscator/plugin-helpers" -lCallObfuscatorHelpers 
+        clang ./build/objs/example.obj -o ./build/example.exe -L"<path to folder containing libCallObfuscatorHelpers.a> -lCallObfuscatorHelpers 
 
     If added helpers path to LIBRARY_PATH then you can ommit the ```-L``` option.
 
@@ -154,8 +156,7 @@ In case you are thinking that those are a lot of commands, well, they are always
 ## Developer guide
 * ### File distribution
     ---
-    The code is always divided into two folders, one called headers, for definitions and macros mainly, and the other called source, containing the actual source   code. For every source code file, there is a header file matching the relative path to the source folder, in the headers folder. Documentation for functions is    always found at headers files.
-
+    The code is always divided into two folders, one called headers, for definitions and macros mainly, and the other called source, containing the actual source code. For every source code file, there is a header file matching the relative path to the source folder. Documentation for functions is always found at headers files.
 
     You will find two source codebases in this project:
 
@@ -175,7 +176,7 @@ In case you are thinking that those are a lot of commands, well, they are always
 
 * ### How the pass works
     ---
-    Knoledge about indirect syscalling, dynamic stack spoofing and common terms like hooks, register, stack... is assumed.
+    Knoledge about common terms like hooks, register, stack... is assumed.
     This is not an in-depth guide, just enough to get you throw the execution flow.
 
     First, we go through every defined function in the code; if any of them is found in the config file, we store it. Once we find all the functions that will be obfuscated, we create two tables:
@@ -184,25 +185,25 @@ In case you are thinking that those are a lot of commands, well, they are always
 
     At compile time, this tables will be partially initialized, but the only value we need at this moment is the function ID (its index in the function table).
 
-    After building the tables, we find every call to the obfuscated functions; for each of them, replace the call by a call to ```__callobf_callDispatcher```, and pass the id as the first argument, then pass all the function arguments.
+    After building the tables, we find every call to the obfuscated functions; for each of them, replace the call by a call to ```__callobf_callDispatcher```, and pass the ID as the first argument, then pass all the other function arguments.
 
-    ```__callobf_callDispatcher``` has is defined as ```PVOID __callobf_callDispatcher(DWORD32 index, ...)```. It will get all the info it needs from the function table by using the ID (index) in the first argument.
+    ```__callobf_callDispatcher``` is defined as ```PVOID __callobf_callDispatcher(DWORD32 index, ...)```. It will get all the info it needs from the function table by using the ID (index) in the first argument.
 
     A function has its entry partially initialized until it is called; at that moment, ```__callobf_callDispatcher``` will store all the required information to call and obfuscate the function and pass the other arguments to the function being called.
 
 * ### How the dispatching system works
     ---
-    The dispatching system starts by initializing the frame table (```__callobf_globalFrameTable```), used to cache posible frames and gadgets that will be used to build the obfuscated stack. The obfuscation method is the same as explained [here](https://klezvirus.github.io/RedTeaming/AV_Evasion/StackSpoofing/), still an outstanding job.
+    The dispatching system starts by initializing the entry in the function table.
+    * Get the dll from the dll table and load it if needed.
+    * Find the function in the IAT and store the address in the function table.
+    * Find if the call is a syscall; if it is, get the ssn and store it in the function table.
+  
+    If not already done, initialize the frame table (```__callobf_globalFrameTable```), used to cache posible frames and gadgets that will be used to build the obfuscated stack. The obfuscation method is the same as explained [here](https://klezvirus.github.io/RedTeaming/AV_Evasion/StackSpoofing/), still an outstanding job.
 
-    When ```__callobf_globalFrameTable``` gets invoked, the following happens:
-    
-    * Loads the function if needed:
-        * Gets the dll from the dll table and loads it if needed.
-        * Find the function in the IAT and store the address in the function    table.
-        * Find if the call is a syscall; if it is, get the ssn and store it in the function table.
+    After the the function is loaded and the frame table is initialized:
 
-    * Build a fake stack using the values stored in the frame table     and   store it over the current stack pointer.
-    * Update the ciclic value used to pick which values are used for      building the stack.
+    * Build a fake stack using the values stored in the frame table and store it over the current stack pointer.
+    * Update the ciclic value used to pick which values are used for building the stack.
     * Move arguments to their right place.
     * Change rsp to match the start of the fake stack.
     * If syscall, set ssn in rax.
