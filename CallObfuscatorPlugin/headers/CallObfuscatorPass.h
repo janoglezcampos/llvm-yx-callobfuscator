@@ -22,11 +22,10 @@ using namespace json;
 
 namespace callobfuscatorpass
 {
-
     class CallObfuscatorPass : public PassInfoMixin<CallObfuscatorPass>
     {
     public:
-            /**
+        /**
          * @brief Function invoked by opt for each module given.
          *
          * @param M Module being optimized.
