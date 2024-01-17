@@ -26,16 +26,36 @@ namespace callobfuscatorpass
     class CallObfuscatorPass : public PassInfoMixin<CallObfuscatorPass>
     {
     public:
+            /**
+         * @brief Function invoked by opt for each module given.
+         *
+         * @param M Module being optimized.
+         * @param AM Analisys Manager for current optimization
+         * @return PreservedAnalyses Wich analyses can be preserved.
+         */
         PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
 
     private:
         bool configLoaded;
         bool fileMalformed;
-        Object jsonObj;
+        Object jsonConfig;
 
-        // bool runOnBasicBlock(BasicBlock &B);
-        bool readConfig(Object &jsonObj);
-        bool isFunctionHooked(StringRef functionName, StringRef &dllName);
+        /**
+         * @brief Check if the given function is indicated as hooked in the configuration file.
+         *
+         * @param argFunctionName Name of the function to check.
+         * @param argDllName [OUT] Returns dll name, if hooked.
+         * @return true Function is hooked.
+         */
+        bool isFunctionHooked(StringRef argFunctionName, StringRef &argDllName);
+
+        /**
+         * @brief Reads config file from LLVM_OBF_FUNCTIONS env variable.
+         *
+         * @param jsonConfig [OUT] Returns json config.
+         * @return true Success.
+         */
+        bool readConfig(Object &jsonConfig);
     };
 
 }

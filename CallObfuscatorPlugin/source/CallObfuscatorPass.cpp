@@ -41,7 +41,7 @@ using namespace json;
 
 namespace callobfuscatorpass
 {
-    bool CallObfuscatorPass::readConfig(Object &jsonObj)
+    bool CallObfuscatorPass::readConfig(Object &jsonConfig)
     {
 
         StringRef config = getenv(LLVM_CALL_OBF_CONFIG_PATH);
@@ -79,7 +79,7 @@ namespace callobfuscatorpass
 
         outs() << "[INFO] Using config: " << config << "\n";
 
-        jsonObj = *ParseResult.get().getAsObject();
+        jsonConfig = *ParseResult.get().getAsObject();
         return true;
     }
 
@@ -88,7 +88,7 @@ namespace callobfuscatorpass
         if (fileMalformed)
             return false;
 
-        const json::Array *dllHooks = jsonObj.getArray(DLL_HOOKS_KEY);
+        const json::Array *dllHooks = jsonConfig.getArray(DLL_HOOKS_KEY);
 
         if (!dllHooks)
         {
@@ -155,7 +155,7 @@ namespace callobfuscatorpass
         if (!configLoaded)
         {
             configLoaded = true; // No matter the result, try only once
-            bool result = readConfig(jsonObj);
+            bool result = readConfig(jsonConfig);
             if (!result)
                 return PreservedAnalyses::all();
         }
